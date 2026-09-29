@@ -1,0 +1,34 @@
+{# Inline SVG icon set (stroke-based, 24x24 grid). No icon font, no sprite,
+   no network request — the paths ship with the page and inherit currentColor.
+
+   Jinja imports do NOT flow through {% extends %}: every template that calls
+   icon() needs its own {% import "_icons.html" as icons %} line.
+
+   Usage: {{ icons.icon('home') }} · {{ icons.icon('pause', 16) }} #}
+{% macro icon(name, size=18) -%}
+{%- set paths = {
+  'home':          '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
+  'pipeline':      '<rect x="3" y="4" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 6h7M14 9h7M14 16h7M14 19h7"/>',
+  'replies':       '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
+  'sending':       '<path d="m22 2-11 11"/><path d="M22 2 15 22l-4-9-9-4z"/>',
+  'mailboxes':     '<circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8"/>',
+  'offers':        '<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r=".6"/>',
+  'billing':       '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+  'more':          '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+  'pause':         '<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>',
+  'play':          '<path d="m6 4 14 8-14 8z"/>',
+  'refresh':       '<path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/>',
+  'chevron-right': '<path d="m9 6 6 6-6 6"/>',
+  'log-out':       '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+  'clock':         '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  'chat':          '<path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5z"/>',
+  'facebook':      '<path d="M15 3h-2a4 4 0 0 0-4 4v3H6v4h3v7h4v-7h3l1-4h-4V7a1 1 0 0 1 1-1h2z"/>',
+  'instagram':     '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><path d="M17.2 6.8h.01"/>',
+  'x':             '<path d="m4 4 16 16"/><path d="M20 4 4 20"/>',
+  'linkedin':      '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 11v5"/><path d="M8 8h.01"/><path d="M12 16v-3a2 2 0 0 1 4 0v3"/>',
+  'tiktok':        '<path d="M14 4v9.5A3.5 3.5 0 1 1 10.5 10"/><path d="M14 4a5 5 0 0 0 5 5"/>',
+} -%}
+<svg class="i i-{{ name }}" viewBox="0 0 24 24" width="{{ size }}" height="{{ size }}"
+  fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+  stroke-linejoin="round" aria-hidden="true">{{ paths[name] | safe }}</svg>
+{%- endmacro %}

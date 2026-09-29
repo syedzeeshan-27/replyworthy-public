@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% import "_icons.html" as icons %}
+{% block title %}Replyworthy — Sending{% endblock %}
+{% block page_title %}Sending{% endblock %}
+{% block page_sub %}<div class="sub">Your campaigns and what's queued to go out.
+  {% if auto_tick_minutes %}Runs itself every {{ auto_tick_minutes }} minutes.{% endif %}</div>{% endblock %}
+
+{% block actions %}
+<form method="post" action="/campaigns/tick" style="display:inline">
+  <button type="submit" class="btn-ghost btn-act" {{ 'disabled' if tick.running else '' }}
+          title="Check replies and send due emails right now"
+          aria-label="Check replies and send due emails right now">
+    {{ icons.icon('refresh', 16) }}<span class="lbl">{{ 'Working…' if tick.running else 'Check now' }}</span></button>
+</form>
+<form method="post" action="{{ '/campaigns/ws-resume' if ws_paused else '/campaigns/ws-pause' }}" style="display:inline">
+  <button type="submit" class="btn-act {{ '' if ws_paused else 'btn-danger' }}"
+          title="{{ 'Resume my sending' if ws_paused else 'Pause my sending' }}"
+          aria-label="{{ 'Resume my sending' if ws_paused else 'Pause my sending' }}">
+    {{ icons.icon('play' if ws_paused else 'pause', 16) }}<span class="lbl">{{ 'Resume' if ws_paused else 'Pause' }}</span></button>
+</form>
+{% if is_admin %}
+<form method="post" action="{{ '/campaigns/resume' if paused else '/campaigns/pause' }}" style="display:inline">
+  <button type="submit" class="btn-act btn-ghost-danger"
+          title="{{ 'Resume sending for ALL workspaces (admin)' if paused else 'Pause sending for ALL workspaces (admin)' }}"
+          aria-label="{{ 'Resume sending for all workspaces' if paused else 'Pause sending for all workspaces' }}">
+    {{ icons.icon('play' if paused else 'pause', 16) }}<span class="lbl">All</span></button>
+</form>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if dry_run %}
+<div class="banner banner-warn"><span>Practice mode — nothing really sends.
+  <a href="/mailboxes">Set up live sending</a>.</span></div>
+{% endif %}
+{% if paused %}
+<div class="banner banner-danger">All sending is paused platform-wide by the admin.</div>
+{% elif ws_paused %}
+<div class="banner banner-danger">Your sending is paused. Resume when the list is fixed.</div>
+{% endif %}
+
+{# Admin-only: TICK is process-global, so its counts cover every workspace. #}
+{% if is_admin and tick.finished_at and not tick.running %}
+<div class="card">
+  <div class="hd"><h2>Last run</h2>
+    <span class="hint">finished {{ tick.finished_at.strftime('%Y-%m-%d %H:%M UTC') }}</span></div>
+  {% if tick_story %}
+  <table class="table">
+    {% for row in tick_story %}
+    <tr>
+      <td style="font-weight:650;width:180px">{{ row.phase }}</td>
+      <td {% if row.error %}class="alert"{% endif %}>{{ row.text }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="hint">All quiet — no new replies, nothing due to send.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="grid-2">
+  <div class="card">
+    <h2>New campaign</h2>
+    <p class="hint">Nothing sends until you enroll leads into it.</p>
+    <form method="post" action="/campaigns/create">
+      <label for="cname">Campaign name</label>
+      <input type="text" id="cname" name="name" placeholder="e.g. Boise dentists July" required>
+      <label for="cap">Daily cap (emails/day per mailbox)</label>
+      <input type="number" id="cap" name="daily_cap" value="30" min="1" max="200" style="max-width:130px">
+      <p class="hint">Keep 30 or lower until the sending domain is warmed up.</p>
+      <button type="submit" style="margin-top:14px">Create campaign</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h2>Waiting to send{% if waiting_n %} ({{ waiting_n }}){% endif %}</h2>
+    {% if outbox %}
+    <ul class="outbox">
+      {% for s in outbox %}
+      <li>
+        <a class="ob-row" href="/lead/{{ s.lead_id }}">
+          {{ icons.icon('clock', 16) }}
+          <div class="ob-main">
+            <span class="ob-lead">{{ s.lead_name }}</span>
+            <span class="ob-meta">step {{ s.step_number }} · {{ s.lead_email }} · {{ s.campaign_name }}</span>
+          </div>
+          <span class="ob-when">{% if s.scheduled_at <= now %}due — waiting for send window{% else %}{{ s.scheduled_at[:16] }} UTC{% endif %}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if waiting_n > outbox|length %}
+    <p class="hint">+{{ waiting_n - outbox|length }} more</p>
+    {% endif %}
+    <p class="hint">Emails go out 8am–5pm Mon–Fri in each lead's own timezone;
+      a new mailbox sends only a few a day while it warms up.</p>
+    {% else %}
+    <div class="empty-state"><div class="big">📭</div><div class="t">Outbox is empty</div>
+      Enroll leads into a campaign to queue emails.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <h2>Campaigns</h2>
+  <p class="hint" style="margin:-6px 0 12px">{{ enrollable }} lead{{ '' if enrollable == 1 else 's' }}
+    ready to enroll (status <span class="badge badge-new">new</span> with a verified email).</p>
+  {% if campaigns %}
+  <div class="table-scroll">
+  <table class="table">
+    <tr>
+      <th>Name</th><th>Status</th><th>Cap</th>
+      <th>Queued</th><th>Today</th><th>Total</th><th>Failed</th>
+      <th>Enroll leads</th><th></th>
+    </tr>
+    {% for c in campaigns %}
+    <tr>
+      <td style="font-weight:650">{{ c.name }}<div class="hint">#{{ c.id }}</div></td>
+      <td><span class="badge {{ 'badge-interested' if c.status == 'active' else ('badge-meeting' if c.status == 'done' else 'badge-new') }}">{{ c.status }}</span></td>
+      <td>{{ c.daily_cap }}</td>
+      <td>{{ c.n_scheduled or 0 }}</td>
+      <td>{{ c.n_sent_today or 0 }}</td>
+      <td>{{ c.n_sent_total or 0 }}</td>
+      <td>{% if c.n_failed %}<span class="badge badge-needs_human">{{ c.n_failed }}</span>{% else %}0{% endif %}</td>
+      <td>
+        <form method="post" action="/campaigns/{{ c.id }}/enroll" style="display:flex;gap:6px;align-items:center">
+          <input type="number" name="min_score" value="4" min="1" max="5" title="min score" style="width:58px;padding:5px 8px">
+          <input type="number" name="limit" value="50" min="1" max="500" title="max leads" style="width:70px;padding:5px 8px">
+          <button type="submit" class="btn-sm">Enroll</button>
+        </form>
+        <div class="hint">min score · max leads</div>
+      </td>
+      <td>
+        {% if c.status != 'done' %}
+        <form method="post" action="/campaigns/{{ c.id }}/toggle">
+          <button type="submit" class="btn-sm btn-ghost">{{ 'Resume' if c.status == 'paused' else 'Pause' }}</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="big">📬</div>
+    <div class="t">No campaigns yet</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

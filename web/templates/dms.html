@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% import "_icons.html" as icons %}
+{% block title %}Replyworthy — DMs{% endblock %}
+{% block page_title %}DM queue{% endblock %}
+{% block page_sub %}<div class="sub">{{ rows|length }} lead{{ '' if rows|length == 1 else 's' }} with no email but a social page — reachable by a DM you send yourself.</div>{% endblock %}
+
+{% block content %}
+{% if rows %}
+<div class="dm-list">
+  {% for lead in rows %}
+  <div class="card dm-card" id="lead-{{ lead.id }}">
+    <div class="dm-head">
+      <div class="dm-who">
+        <a href="/lead/{{ lead.id }}" class="lead-name">{{ lead.name }}</a>
+        <span class="hint">{{ lead.category or '' }}{{ ' · ' if lead.category and lead.city }}{{ lead.city or '' }}</span>
+      </div>
+      {% if lead.score is not none %}<span class="score score-{{ lead.score }}">★ {{ lead.score }}</span>{% endif %}
+      <span class="dm-links">
+        {% for platform, url in lead.socials.items() %}
+        <a class="social-link" href="{{ url|safe_href }}" target="_blank" rel="noopener"
+           title="Open their {{ platform }} page">{{ icons.icon(platform, 18) }}</a>
+        {% endfor %}
+      </span>
+      <button type="button" class="btn btn-sm dm-write" data-id="{{ lead.id }}">Write DM</button>
+    </div>
+    <div class="dm-result" hidden>
+      <textarea class="dm-text" rows="4" spellcheck="false"></textarea>
+      <div class="hint dm-flag" hidden>⚠ A tool name survived regeneration — edit it out before sending.</div>
+      <div class="dm-actions">
+        <button type="button" class="btn btn-sm dm-copy">Copy text</button>
+        <form method="post" action="/dms/{{ lead.id }}/sent" class="dm-sent-form">
+          <input type="hidden" name="dm_text" value="">
+          <select name="platform" title="Where you sent it">
+            {% for platform in lead.socials %}
+            <option value="{{ platform }}">sent on {{ platform }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="btn btn-sm">Mark sent</button>
+        </form>
+      </div>
+      <div class="hint">Open their page, paste, send — then mark it sent so this lead is never DM'd twice.</div>
+    </div>
+    <div class="hint dm-error" hidden></div>
+  </div>
+  {% endfor %}
+</div>
+<noscript><div class="hint">Writing a DM needs JavaScript enabled.</div></noscript>
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="big">💬</div>
+    <div class="t">No DM-able leads right now</div>
+    Leads land here when a search finds a Facebook or Instagram page but no
+    email address, so nothing you scraped goes to waste.
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Write DM: one fetch per click (each generation is a paid Claude call).
+// The system never sends anything — the human copies, pastes, and sends.
+document.querySelectorAll('.dm-write').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var card = document.getElementById('lead-' + btn.dataset.id);
+    var errbox = card.querySelector('.dm-error');
+    btn.disabled = true;
+    var label = btn.textContent;
+    btn.textContent = 'Writing…';
+    errbox.hidden = true;
+    fetch('/dms/' + btn.dataset.id + '/write', {
+      method: 'POST', credentials: 'same-origin'
+    })
+      .then(function (r) {
+        if (r.redirected) { location.href = r.url; return null; }
+        return r.json();
+      })
+      .then(function (body) {
+        if (body === null) return;
+        if (!body.ok) {
+          errbox.textContent = body.error || 'Could not write the DM.';
+          errbox.hidden = false;
+          return;
+        }
+        card.querySelector('.dm-text').value = body.dm_text;
+        card.querySelector('.dm-flag').hidden = !body.copy_flagged;
+        card.querySelector('.dm-result').hidden = false;
+        btn.textContent = 'Rewrite';
+      })
+      .catch(function () {
+        errbox.textContent = 'Network error — try again.';
+        errbox.hidden = false;
+      })
+      .finally(function () {
+        btn.disabled = false;
+        if (btn.textContent === 'Writing…') btn.textContent = label;
+      });
+  });
+});
+
+document.querySelectorAll('.dm-copy').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var text = btn.closest('.dm-result').querySelector('.dm-text').value;
+    navigator.clipboard.writeText(text).then(function () {
+      btn.textContent = 'Copied ✓';
+      setTimeout(function () { btn.textContent = 'Copy text'; }, 1600);
+    });
+  });
+});
+
+// Whatever is in the textarea when "Mark sent" is clicked is what gets
+// recorded — edits included, so the note matches what was actually sent.
+document.querySelectorAll('.dm-sent-form').forEach(function (form) {
+  form.addEventListener('submit', function () {
+    form.querySelector('input[name="dm_text"]').value =
+      form.closest('.dm-result').querySelector('.dm-text').value;
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Replyworthy — Offers{% endblock %}
+{% block page_title %}Offers{% endblock %}
+{% block page_sub %}<div class="sub">What you sell.</div>{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="alert">{{ error }}</div>
+{% endif %}
+
+<div class="card">
+  <h2>Your offers</h2>
+  {% if offers %}
+  <div class="table-scroll">
+  <table class="table">
+    <tr>
+      <th>Name</th><th>Product</th><th>Target customer</th><th></th>
+    </tr>
+    {% for o in offers %}
+    <tr>
+      <td style="font-weight:650">{{ o.name }}
+        {% if o.is_default %}<span class="badge badge-interested">default</span>{% endif %}</td>
+      <td class="hint" style="max-width:340px">{{ o.product_description | truncate(90) }}</td>
+      <td>{{ o.target_customer or '—' }}</td>
+      <td style="white-space:nowrap;text-align:right">
+        <a href="/offers?edit={{ o.id }}" class="btn-sm btn-ghost">Edit</a>
+        {% if not o.is_default %}
+        <form method="post" action="/offers/{{ o.id }}/default" style="display:inline">
+          <button type="submit" class="btn-sm btn-ghost">Make default</button></form>
+        <form method="post" action="/offers/{{ o.id }}/delete" style="display:inline"
+              onsubmit="return confirm('Delete this offer?')">
+          <button type="submit" class="btn-sm btn-danger">Delete</button></form>
+        {% else %}
+        <form method="post" action="/offers/{{ o.id }}/delete" style="display:inline">
+          <button type="submit" class="btn-sm btn-ghost"
+                  title="Set another offer as default first">Delete</button></form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-state"><div class="big">🏷️</div>
+    <div class="t">No offers yet</div>Add your first one below.</div>
+  {% endif %}
+</div>
+
+{% set f = edit_offer if edit_offer else (form or {}) %}
+<div class="card">
+  <div class="hd">
+    <h2>{{ 'Edit offer' if edit_offer else 'New offer' }}</h2>
+    <div class="spacer"></div>
+    {% if edit_offer %}<a href="/offers" class="btn-ghost btn-sm">Cancel</a>{% endif %}
+  </div>
+
+  <form method="post"
+        action="{{ '/offers/' ~ edit_offer.id ~ '/update' if edit_offer else '/offers/create' }}">
+    <label for="name">Name</label>
+    <input type="text" id="name" name="name" value="{{ f.name or '' }}"
+           placeholder="e.g. SMS text-back bot" required>
+
+    <label for="product_description">Product description</label>
+    <textarea id="product_description" name="product_description"
+              placeholder="2–3 concrete sentences on exactly what you sell." required>{{ f.product_description or '' }}</textarea>
+
+    <label for="value_prop">Value proposition</label>
+    <textarea id="value_prop" name="value_prop"
+              placeholder="The outcome the customer gets. e.g. fewer missed leads, more booked jobs." required>{{ f.value_prop or '' }}</textarea>
+
+    <label for="target_customer">Target customer</label>
+    <input type="text" id="target_customer" name="target_customer"
+           value="{{ f.target_customer or '' }}"
+           placeholder="e.g. local service businesses that miss calls">
+
+    <label for="tone">Tone</label>
+    <input type="text" id="tone" name="tone" value="{{ f.tone or '' }}"
+           placeholder="e.g. direct, friendly">
+
+    <label for="cta_style">Call-to-action style</label>
+    <input type="text" id="cta_style" name="cta_style" value="{{ f.cta_style or '' }}"
+           placeholder="e.g. soft ask for a short reply">
+
+    <label for="sender_name">Sender name</label>
+    <input type="text" id="sender_name" name="sender_name" value="{{ f.sender_name or '' }}"
+           placeholder="Who the email is from">
+
+    <label for="sender_title">Sender title</label>
+    <input type="text" id="sender_title" name="sender_title" value="{{ f.sender_title or '' }}"
+           placeholder="e.g. Founder">
+
+    <label for="qualification_hints">Qualification hints</label>
+    <textarea id="qualification_hints" name="qualification_hints"
+              placeholder="What makes a business a strong fit for this offer.">{{ f.qualification_hints or '' }}</textarea>
+
+    <label for="disqualifiers">Disqualifiers</label>
+    <textarea id="disqualifiers" name="disqualifiers"
+              placeholder="Signals a business is a poor fit — skip or score low.">{{ f.disqualifiers or '' }}</textarea>
+
+    <button type="submit" style="margin-top:16px">
+      {{ 'Save changes' if edit_offer else 'Create offer' }}</button>
+  </form>
+</div>
+{% endblock %}

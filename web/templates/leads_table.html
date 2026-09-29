@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Replyworthy — Pipeline{% endblock %}
+{% block page_title %}Pipeline{% endblock %}
+{% block page_sub %}<div class="sub" id="leadcount">{{ total }} lead{{ '' if total == 1 else 's' }}{{ ' matching your filters' if filtered else '' }}.</div>{% endblock %}
+
+{% block actions %}
+{# Export what's currently filtered (all matching leads, every page), not just
+   the checked rows. Hrefs are seeded from filter_qs and kept in sync by the
+   live-search JS below. #}
+<div class="export-actions">
+  <a class="btn btn-sm" id="export-xlsx"
+     href="/pipeline/export?{{ filter_qs }}{% if filter_qs %}&{% endif %}fmt=xlsx">⬇ Excel</a>
+  <a class="btn btn-sm btn-ghost" id="export-csv"
+     href="/pipeline/export?{{ filter_qs }}{% if filter_qs %}&{% endif %}fmt=csv">⬇ CSV</a>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if counts %}
+{# Snapshot + shortcut in one: each badge filters the table below. #}
+<div class="snapshot">
+  <a href="/pipeline" class="badge badge-new {{ 'on' if not f.status else '' }}">all active · {{ active_total }}</a>
+  {% for status, n in counts.items() %}
+  <a href="/pipeline?status={{ status }}" class="badge badge-{{ status }} {{ 'on' if f.status == status else '' }}">{{ status }} · {{ n }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<form method="get" action="/pipeline" class="filterbar" id="filterbar">
+  <input type="search" name="q" value="{{ f.q }}" placeholder="Search by name…">
+  <select name="status" title="Stage">
+    <option value="">All active ({{ active_total }})</option>
+    {% for s in active_statuses %}
+    <option value="{{ s }}" {{ 'selected' if f.status == s }}>{{ s }} ({{ counts.get(s, 0) }})</option>
+    {% endfor %}
+    <option value="suppressed" {{ 'selected' if f.status == 'suppressed' }}>suppressed ({{ suppressed_total }})</option>
+  </select>
+  <select name="score" title="Score (exact match)">
+    <option value="0">Any score</option>
+    {% for n in (5, 4, 3, 2, 1) %}
+    <option value="{{ n }}" {{ 'selected' if f.score == n }}>★ {{ n }} only</option>
+    {% endfor %}
+  </select>
+  {% if cities %}
+  <select name="city" title="City">
+    <option value="">All cities</option>
+    {% for c in cities %}
+    <option value="{{ c }}" {{ 'selected' if f.city == c }}>{{ c }}</option>
+    {% endfor %}
+  </select>
+  {% endif %}
+  <select name="type" title="Lead type">
+    <option value="">All types</option>
+    <option value="business" {{ 'selected' if f.type == 'business' }}>Businesses</option>
+    <option value="person" {{ 'selected' if f.type == 'person' }}>People</option>
+  </select>
+  <select name="channel" title="How you can reach them">
+    <option value="">Any channel</option>
+    <option value="email" {{ 'selected' if f.channel == 'email' }}>Has email</option>
+    <option value="dm" {{ 'selected' if f.channel == 'dm' }}>DM-able (no email, has social)</option>
+    <option value="phone" {{ 'selected' if f.channel == 'phone' }}>Phone only</option>
+  </select>
+  <select name="sort" title="Sort">
+    {% for key, label in sorts %}
+    <option value="{{ key }}" {{ 'selected' if f.sort == key }}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  {# No apply button: typing and every dropdown search on their own. The
+     button below is the no-JS fallback, and Enter submits the form. #}
+  <noscript><button type="submit" class="btn btn-sm">Search</button></noscript>
+  <a href="/pipeline" class="btn btn-ghost btn-sm" id="clearfilters" {{ '' if filtered else 'hidden' }}>Clear</a>
+</form>
+
+<form method="post" action="/pipeline/bulk-status" id="bulkform">
+  <div class="bulkbar" id="bulkbar" hidden>
+    <span id="bulkcount">0 selected</span>
+    <select name="status" required>
+      <option value="" selected disabled>move to…</option>
+      {% for s in statuses %}
+      <option value="{{ s }}">{{ s }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-sm">Apply</button>
+  </div>
+
+  <div id="leadsresults">{% include "_leads_rows.html" %}</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Live search: the box and every dropdown fetch the results fragment and swap
+// it in, so nothing here ever needs an Apply click or a page reload.
+var filterbar = document.getElementById('filterbar');
+var results = document.getElementById('leadsresults');
+var searchbox = filterbar.querySelector('input[name="q"]');
+var clearbtn = document.getElementById('clearfilters');
+var snapshot = document.querySelector('.snapshot');
+var timer, seq = 0;
+
+// The status dropdown swaps rows without a reload, so the snapshot badges
+// have to follow it or they'd keep highlighting the previous status.
+function syncSnapshot(status) {
+  if (!snapshot) return;
+  Array.prototype.forEach.call(snapshot.querySelectorAll('a'), function (a) {
+    var s = new URL(a.href, location.origin).searchParams.get('status') || '';
+    a.classList.toggle('on', s === status);
+  });
+}
+
+// Defaults stay out of the URL, so an untouched view reads as unfiltered —
+// the same rule the route applies when it builds filter_qs.
+function isDefault(k, v) {
+  return v === '' || (k === 'score' && v === '0')
+                  || (k === 'sort' && v === 'updated_desc');
+}
+
+// The export links sit in the topbar (outside the swapped results), so they
+// survive every fragment swap — they just need the same querystring the table
+// is showing kept on their hrefs, so a download matches the current filters.
+var exportXlsx = document.getElementById('export-xlsx');
+var exportCsv = document.getElementById('export-csv');
+function updateExport(qs) {
+  var base = '/pipeline/export?' + (qs ? qs + '&' : '');
+  if (exportXlsx) exportXlsx.href = base + 'fmt=xlsx';
+  if (exportCsv) exportCsv.href = base + 'fmt=csv';
+}
+
+function runSearch() {
+  var params = new URLSearchParams();
+  new FormData(filterbar).forEach(function (v, k) {
+    if (!isDefault(k, v)) params.set(k, v);
+  });
+  var qs = params.toString();
+  clearbtn.hidden = qs === '';
+  updateExport(qs);
+  syncSnapshot(params.get('status') || '');
+  // Dropping `page` is deliberate: a new search starts at page 1.
+  history.replaceState(null, '', '/pipeline' + (qs ? '?' + qs : ''));
+  var mine = ++seq;
+  params.set('partial', '1');
+  fetch('/pipeline?' + params.toString(), {credentials: 'same-origin'})
+    .then(function (r) {
+      // Session expired: the middleware 303s to /login and fetch follows it,
+      // so a redirected response is the login page, not our rows. Never swap
+      // that in — go there for real, keeping its ?next= .
+      if (r.redirected) { location.href = r.url; return null; }
+      return r.ok ? r.text() : Promise.reject(r.status);
+    })
+    .then(function (html) {
+      if (html === null || mine !== seq) return;   // newer keystroke answered
+      results.innerHTML = html;
+      document.getElementById('leadcount').textContent =
+        document.getElementById('resultsummary').textContent;
+      wireRows();
+    })
+    .catch(function () { if (mine === seq) filterbar.submit(); });
+}
+
+searchbox.addEventListener('input', function () {
+  clearTimeout(timer);
+  timer = setTimeout(runSearch, 250);
+});
+searchbox.addEventListener('keydown', function (e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();                    // never a full page load
+  clearTimeout(timer);
+  runSearch();
+});
+filterbar.querySelectorAll('select').forEach(function (sel) {
+  sel.addEventListener('change', runSearch);
+});
+clearbtn.addEventListener('click', function (e) {
+  e.preventDefault();
+  searchbox.value = '';
+  filterbar.querySelectorAll('select').forEach(function (sel) { sel.selectedIndex = 0; });
+  runSearch();
+});
+
+// Row selection -> bulk bar. Re-wired after every swap: those checkboxes are
+// new elements each time.
+var bar = document.getElementById('bulkbar');
+var count = document.getElementById('bulkcount');
+var boxes = [];
+var selall = null;
+
+function syncBulk() {
+  var n = boxes.filter(function (b) { return b.checked; }).length;
+  bar.hidden = n === 0;
+  count.textContent = n + ' selected';
+  if (selall) selall.checked = n > 0 && n === boxes.length;
+}
+function wireRows() {
+  boxes = Array.prototype.slice.call(results.querySelectorAll('.rowchk'));
+  selall = document.getElementById('selall');
+  if (selall) selall.addEventListener('change', function () {
+    boxes.forEach(function (b) { b.checked = selall.checked; });
+    syncBulk();
+  });
+  boxes.forEach(function (b) { b.addEventListener('change', syncBulk); });
+  syncBulk();
+}
+wireRows();
+</script>
+{% endblock %}

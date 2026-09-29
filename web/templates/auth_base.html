@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Replyworthy{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=5">
+</head>
+<body class="auth-body">
+  <div class="auth-wrap">
+    <div class="auth-brand"><span class="logo">R</span> Replyworthy</div>
+    <div class="card auth-card">
+      <h2>{% block heading %}{% endblock %}</h2>
+      {% if error %}<div class="auth-alert auth-alert-error">{{ error }}</div>{% endif %}
+      {% if message %}<div class="auth-alert auth-alert-ok">{{ message }}</div>{% endif %}
+      {% block content %}{% endblock %}
+    </div>
+    <div class="auth-foot">{% block foot %}{% endblock %}</div>
+  </div>
+  {% if request.query_params.get('msg') %}
+  <div class="toast" id="toast">{{ request.query_params.get('msg') }}</div>
+  <script>setTimeout(() => document.getElementById('toast').remove(), 3200);</script>
+  {% endif %}
+</body>
+</html>

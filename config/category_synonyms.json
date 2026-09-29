@@ -1,0 +1,31 @@
+{
+  "_comment": "Extra Google Maps search phrases per category. One phrase only ever returns Google's feed for that phrase, so fanning out across a few near-synonyms is what turns a 33-result search into a full one. Keys are matched lowercased and exact against the searched category; values are appended after the category itself and after any spec keywords, then capped at MAX_TERMS in tools/sources/google_maps.py. Keep these tight — every extra term is a separate paid crawl, and terms that drift off-target just add duplicates for dedupe_exact to strip.",
+
+  "dentist": ["dental clinic", "dental office", "family dentistry"],
+  "dental clinic": ["dentist", "dental office", "family dentistry"],
+  "dental clinics": ["dentist", "dental clinic", "dental office"],
+  "dentists": ["dentist", "dental clinic", "dental office"],
+  "orthodontist": ["orthodontics", "braces", "dental clinic"],
+
+  "chiropractor": ["chiropractic clinic", "chiropractic care"],
+  "physical therapist": ["physical therapy clinic", "physiotherapy"],
+  "dermatologist": ["dermatology clinic", "skin clinic"],
+  "optometrist": ["eye doctor", "optical store", "vision center"],
+  "veterinarian": ["veterinary clinic", "animal hospital", "vet clinic"],
+
+  "med spa": ["medical spa", "medspa", "aesthetics clinic"],
+  "salon": ["hair salon", "beauty salon"],
+  "barber": ["barber shop", "barbershop"],
+  "nail salon": ["nail spa", "manicure pedicure"],
+
+  "plumber": ["plumbing service", "plumbing contractor"],
+  "electrician": ["electrical contractor", "electrical service"],
+  "hvac": ["hvac contractor", "air conditioning repair", "heating and cooling"],
+  "roofer": ["roofing contractor", "roofing company"],
+  "landscaper": ["landscaping service", "lawn care service"],
+
+  "law firm": ["attorney", "lawyer", "legal services"],
+  "real estate agent": ["realtor", "real estate agency"],
+  "gym": ["fitness center", "health club"],
+  "auto repair": ["auto repair shop", "mechanic", "car repair"]
+}

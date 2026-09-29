@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Replyworthy — Home{% endblock %}
+{% block page_title %}Home{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="alert">{{ error }}</div>
+{% endif %}
+
+{# Every number is a doorway to the page that acts on it — no prose pointers. #}
+<div class="stats-grid">
+  <a class="stat accent" href="/pipeline"><div class="v">{{ stats.total_leads }}</div><div class="l">Total leads</div></a>
+  <a class="stat hot" href="/pipeline?min_score=4"><div class="v">{{ stats.hot_leads }}</div><div class="l">Hot (score 4–5)</div></a>
+  <a class="stat" href="/pipeline"><div class="v">{{ stats.with_email }}</div><div class="l">With email</div></a>
+  <a class="stat" href="/campaigns"><div class="v">{{ stats.scheduled }}</div><div class="l">Emails waiting</div>
+    {% if stats.scheduled and stats.next_send_at %}
+    <div class="s">next {{ stats.next_send_at[:16] }} UTC</div>{% endif %}</a>
+  <a class="stat" href="/campaigns"><div class="v">{{ stats.sent_today }}</div><div class="l">Sent today</div></a>
+  <a class="stat" href="/queue"><div class="v">{{ stats.replies }}</div><div class="l">Replies</div></a>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h2>Find leads</h2>
+    <form method="post" action="/jobs">
+      <label for="lead_type">Look for</label>
+      <select id="lead_type" name="lead_type" style="width:100%">
+        <option value="business">Businesses</option>
+        <option value="person">People at companies</option>
+      </select>
+
+      <label for="category">Category or industry</label>
+      <input type="text" id="category" name="category"
+             placeholder="e.g. dentist, plumber, marketing agency" required>
+
+      <label for="city">City</label>
+      <input type="text" id="city" name="city" placeholder="e.g. Austin TX" required>
+
+      <label for="limit">Max leads</label>
+      <input type="number" id="limit" name="limit" value="50" min="1"
+             max="{{ max_count }}" style="max-width:140px">
+
+      {% if offers %}
+      <label for="offer_id">Offer to pitch</label>
+      <select id="offer_id" name="offer_id" style="width:100%">
+        {% for o in offers %}
+        <option value="{{ o.id }}" {{ 'selected' if o.id == default_offer_id else '' }}>
+          {{ o.name }}{{ ' (default)' if o.is_default else '' }}</option>
+        {% endfor %}
+      </select>
+      <p class="hint"><a href="/offers">Manage offers</a></p>
+      {% endif %}
+
+      <button type="submit" style="margin-top:18px">Find leads</button>
+    </form>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:18px">
+    {# The status breakdown lives on the Pipeline page, next to the leads it
+       filters — one home, no duplicate counts to keep in sync. #}
+    <div class="card">
+      <div class="hd"><h2>Recent alerts</h2></div>
+      {% if stats.alerts %}
+      <div class="timeline">
+        {% for a in stats.alerts %}
+        <div class="tl">
+          <div class="dot {{ 'dot-reply' if a.severity == 'urgent' else 'dot-note' }}">
+            {{ '❗' if a.severity == 'urgent' else 'ℹ️' }}</div>
+          <div class="body">
+            <div style="font-weight:650;font-size:.86rem">
+              {% if a.lead_id %}<a href="/lead/{{ a.lead_id }}">{{ a.title }}</a>
+              {% else %}{{ a.title }}{% endif %}
+            </div>
+            <div class="when">{{ a.created_at }} · via {{ a.channel }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state"><div class="big">🔕</div>
+        <div class="t">All quiet</div>Alerts show up here when a lead needs you.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

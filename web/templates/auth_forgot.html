@@ -1,0 +1,14 @@
+{% extends "auth_base.html" %}
+{% block title %}Reset password · Replyworthy{% endblock %}
+{% block heading %}Reset your password{% endblock %}
+{% block content %}
+<form method="post" action="/forgot" class="auth-form">
+  <label>Email
+    <input type="email" name="email" required autofocus>
+  </label>
+  <button type="submit">Send reset link</button>
+</form>
+{% endblock %}
+{% block foot %}
+<a href="/login">Back to log in</a>
+{% endblock %}

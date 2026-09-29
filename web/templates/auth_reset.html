@@ -1,0 +1,14 @@
+{% extends "auth_base.html" %}
+{% block title %}New password · Replyworthy{% endblock %}
+{% block heading %}Choose a new password{% endblock %}
+{% block content %}
+<form method="post" action="/reset" class="auth-form">
+  <label>New password <span class="hint">(at least 8 characters)</span>
+    <input type="password" name="password" minlength="8" required autofocus>
+  </label>
+  <button type="submit">Save password</button>
+</form>
+{% endblock %}
+{% block foot %}
+<a href="/login">Back to log in</a>
+{% endblock %}

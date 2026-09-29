@@ -1,0 +1,11 @@
+.env
+.tmp/
+outputs/
+data/
+__pycache__/
+*.pyc
+.venv/
+venv/
+.git/
+.idea/
+.vscode/

@@ -1,0 +1,20 @@
+{% extends "auth_base.html" %}
+{% block title %}Sign up · Replyworthy{% endblock %}
+{% block heading %}Create your account{% endblock %}
+{% block content %}
+<form method="post" action="/signup" class="auth-form">
+  <label>Email
+    <input type="email" name="email" value="{{ email or '' }}" required autofocus>
+  </label>
+  <label>Password <span class="hint">(at least 8 characters)</span>
+    <input type="password" name="password" minlength="8" required>
+  </label>
+  <label>Workspace name <span class="hint">(your company — you can change it later)</span>
+    <input type="text" name="workspace_name" value="{{ workspace_name or '' }}" placeholder="Acme Dental Group">
+  </label>
+  <button type="submit">Create account</button>
+</form>
+{% endblock %}
+{% block foot %}
+Already have an account? <a href="/login">Log in</a>
+{% endblock %}

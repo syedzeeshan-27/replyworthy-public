@@ -1,0 +1,84 @@
+# Render deploy config — applied at the FINAL step only (steps in OWNER_GUIDE.md).
+#
+# One web service runs BOTH the UI and the outreach heartbeat (TICK_LOOP=true
+# starts `outreach_tick.py --loop` inside the same container). The database
+# and logins live in Supabase; the disk below only holds the Excel files and
+# the PAUSED kill-switch file. Requires the Starter plan: free instances sleep
+# (heartbeat dies) and can't attach disks.
+#
+# `sync: false` = set the value by hand in the Render dashboard (secrets never
+# live in this file). Also set one SMTP_PASS_<LOCALPART> env var per mailbox
+# in the dashboard (e.g. SMTP_PASS_ZEE for zee@yourdomain.com) — they can't be
+# pre-listed here because the names depend on the mailboxes you buy.
+
+services:
+  - type: web
+    name: leadgen
+    runtime: docker
+    plan: starter          # disks + always-on require Starter
+    dockerfilePath: ./Dockerfile
+    envVars:
+      # --- pipeline (Stage 1) ---
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: APIFY_API_TOKEN
+        sync: false
+      - key: FIRECRAWL_API_KEY
+        sync: false
+      - key: LEADGEN_MODEL
+        value: claude-sonnet-5
+      - key: LEADGEN_DATA_DIR
+        value: /data
+      # --- Supabase: database + login ---
+      - key: DATABASE_URL
+        sync: false        # Supabase "Session pooler" connection string
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false        # the public anon key, never the service_role key
+      - key: OWNER_EMAIL
+        sync: false        # the only address that becomes admin
+      # --- login sessions (Stage 4) ---
+      - key: SESSION_SECRET
+        sync: false        # random 64-hex; without it everyone is logged out on each restart
+      # --- tenant mailbox encryption (Stage 6) ---
+      - key: MAILBOX_ENC_KEY
+        sync: false        # from `python tools/mailboxes.py --genkey`; key loss bricks stored creds
+      # --- sending (Stage 2) ---
+      - key: DRY_RUN
+        value: "true"      # flip to "false" in the dashboard after warmup, never here
+      - key: SENDER_NAME
+        sync: false
+      - key: SENDER_PHONE
+        sync: false
+      - key: SENDER_ADDRESS
+        sync: false
+      - key: SMTP_MAILBOXES
+        sync: false
+      - key: BASE_URL
+        sync: false        # the Render URL, e.g. https://leadgen.onrender.com
+      - key: UNSUBSCRIBE_SECRET
+        sync: false
+      - key: OUTREACH_PAUSED
+        value: ""
+      - key: TICK_LOOP
+        value: "true"      # heartbeat every 15 min inside this container
+      # --- alerts (Stage 5) ---
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: ALERT_EMAIL
+        sync: false
+      # --- GoHighLevel (Stage 4, optional) ---
+      - key: GHL_SYNC_ENABLED
+        value: "false"
+      - key: GHL_API_TOKEN
+        sync: false
+      - key: GHL_LOCATION_ID
+        sync: false
+    disk:
+      name: leadgen-data
+      mountPath: /data
+      sizeGB: 1
+    healthCheckPath: /

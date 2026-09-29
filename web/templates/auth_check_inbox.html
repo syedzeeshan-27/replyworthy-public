@@ -1,0 +1,14 @@
+{% extends "auth_base.html" %}
+{% block title %}Check your inbox · Replyworthy{% endblock %}
+{% block heading %}Check your inbox{% endblock %}
+{% block content %}
+<p>We sent a confirmation link to <strong>{{ email }}</strong>. Click it and you're in.</p>
+<p class="hint">Nothing after a few minutes? Look in spam, or send it again.</p>
+<form method="post" action="/resend" class="auth-form">
+  <input type="hidden" name="email" value="{{ email }}">
+  <button type="submit">Send the link again</button>
+</form>
+{% endblock %}
+{% block foot %}
+<a href="/login">Back to log in</a>
+{% endblock %}

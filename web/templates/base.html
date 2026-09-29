@@ -1,0 +1,154 @@
+{% import "_icons.html" as icons %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}Replyworthy{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css?v=7">
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="m-top">
+    <a class="m-logo" href="/" aria-label="Replyworthy home">R</a>
+    <div class="m-chips">
+      {% if dry_run %}<span class="chip chip-dry">PRACTICE</span>
+      {% else %}<span class="chip chip-live">LIVE</span>{% endif %}
+      {% if paused or ws_paused %}<span class="chip chip-paused">PAUSED</span>{% endif %}
+    </div>
+  </header>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="logo">R</span> Replyworthy</div>
+      <nav class="nav">
+        <a href="/" class="{{ 'active' if active_nav == 'dashboard' else '' }}">
+          <span class="ico">{{ icons.icon('home') }}</span> Home</a>
+        <a href="/pipeline" class="{{ 'active' if active_nav == 'pipeline' else '' }}">
+          <span class="ico">{{ icons.icon('pipeline') }}</span> Pipeline</a>
+        <a href="/queue" class="{{ 'active' if active_nav == 'queue' else '' }}">
+          <span class="ico">{{ icons.icon('replies') }}</span> Replies
+          {% if queue_count %}<span class="count">{{ queue_count }}</span>{% endif %}</a>
+        <a href="/dms" class="{{ 'active' if active_nav == 'dms' else '' }}">
+          <span class="ico">{{ icons.icon('chat') }}</span> DMs</a>
+        <a href="/campaigns" class="{{ 'active' if active_nav == 'campaigns' else '' }}">
+          <span class="ico">{{ icons.icon('sending') }}</span> Sending</a>
+        <a href="/mailboxes" class="{{ 'active' if active_nav == 'mailboxes' else '' }}">
+          <span class="ico">{{ icons.icon('mailboxes') }}</span> Mailboxes</a>
+        <a href="/offers" class="{{ 'active' if active_nav == 'offers' else '' }}">
+          <span class="ico">{{ icons.icon('offers') }}</span> Offers</a>
+        <a href="/billing" class="{{ 'active' if active_nav == 'billing' else '' }}">
+          <span class="ico">{{ icons.icon('billing') }}</span> Billing</a>
+      </nav>
+      <div class="side-foot">
+        {% if dry_run %}
+        <span class="chip chip-dry">PRACTICE</span>
+        {% else %}
+        <span class="chip chip-live">LIVE</span>
+        {% endif %}
+        {% if paused or ws_paused %}<span class="chip chip-paused">PAUSED</span>{% endif %}
+      </div>
+      {% if user %}
+      <div class="user-box">
+        {% if is_admin and workspaces|length > 1 %}
+        <form method="post" action="/admin/switch" class="ws-switch">
+          <select name="workspace_id" onchange="this.form.submit()" title="Workspace (admin view)">
+            {% for w in workspaces %}
+            <option value="{{ w.id }}" {{ 'selected' if workspace and w.id == workspace.id else '' }}>{{ w.name }}</option>
+            {% endfor %}
+          </select>
+        </form>
+        {% elif workspace %}
+        <span class="ws-name">{{ workspace.name }}</span>
+        {% endif %}
+        <span class="user-email" title="{{ user.email }}">{{ user.email }}</span>
+        <form method="post" action="/logout">
+          <button type="submit" class="btn-logout">Log out</button>
+        </form>
+      </div>
+      {% endif %}
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <h1>{% block page_title %}{% endblock %}</h1>
+          {% block page_sub %}{% endblock %}
+        </div>
+        <div class="spacer"></div>
+        {% block actions %}{% endblock %}
+      </div>
+      <div class="content">
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+  </div>
+
+  {# Mobile-only bottom navigation; hidden >900px. #}
+  <div class="m-backdrop" onclick="mMore(false)"></div>
+  <div class="m-sheet" id="m-sheet" role="dialog" aria-label="Account and more">
+    {% if user %}
+    {% set ws_words = (workspace.name if workspace else user.email).split() %}
+    <div class="sh-user">
+      <span class="sh-avatar">{{ ws_words[0][:1]|upper }}{{ ws_words[1][:1]|upper if ws_words|length > 1 else '' }}</span>
+      <div class="sh-id">
+        <span class="sh-name">{{ workspace.name if workspace else 'Workspace' }}</span>
+        <span class="sh-email" title="{{ user.email }}">{{ user.email }}</span>
+      </div>
+    </div>
+    {% endif %}
+    <a href="/dms" class="sh-row {{ 'active' if active_nav == 'dms' else '' }}">
+      {{ icons.icon('chat', 20) }}<span>DMs</span>{{ icons.icon('chevron-right', 18) }}</a>
+    <a href="/mailboxes" class="sh-row {{ 'active' if active_nav == 'mailboxes' else '' }}">
+      {{ icons.icon('mailboxes', 20) }}<span>Mailboxes</span>{{ icons.icon('chevron-right', 18) }}</a>
+    <a href="/offers" class="sh-row {{ 'active' if active_nav == 'offers' else '' }}">
+      {{ icons.icon('offers', 20) }}<span>Offers</span>{{ icons.icon('chevron-right', 18) }}</a>
+    <a href="/billing" class="sh-row {{ 'active' if active_nav == 'billing' else '' }}">
+      {{ icons.icon('billing', 20) }}<span>Billing</span>{{ icons.icon('chevron-right', 18) }}</a>
+    {% if user %}
+    {% if is_admin and workspaces|length > 1 %}
+    <div class="sh-sep"></div>
+    <div class="sh-row sh-ws">
+      <span>Workspace</span>
+      <form method="post" action="/admin/switch" class="ws-switch">
+        <select name="workspace_id" onchange="this.form.submit()" title="Workspace (admin view)">
+          {% for w in workspaces %}
+          <option value="{{ w.id }}" {{ 'selected' if workspace and w.id == workspace.id else '' }}>{{ w.name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+    </div>
+    {% endif %}
+    <div class="sh-sep"></div>
+    <form method="post" action="/logout">
+      <button type="submit" class="sh-row sh-danger">
+        {{ icons.icon('log-out', 20) }}<span>Log out</span></button>
+    </form>
+    {% endif %}
+  </div>
+  <nav class="m-tabs">
+    <a href="/" class="m-tab {{ 'active' if active_nav == 'dashboard' else '' }}">{{ icons.icon('home', 20) }} Home</a>
+    <a href="/pipeline" class="m-tab {{ 'active' if active_nav == 'pipeline' else '' }}">{{ icons.icon('pipeline', 20) }} Pipeline</a>
+    <a href="/queue" class="m-tab {{ 'active' if active_nav == 'queue' else '' }}">{{ icons.icon('replies', 20) }} Replies
+      {% if queue_count %}<span class="count">{{ queue_count }}</span>{% endif %}</a>
+    <a href="/campaigns" class="m-tab {{ 'active' if active_nav == 'campaigns' else '' }}">{{ icons.icon('sending', 20) }} Sending</a>
+    <button type="button" id="m-more-btn" aria-controls="m-sheet" aria-expanded="false"
+      class="m-tab {{ 'active' if active_nav in ('dms','mailboxes','offers','billing') else '' }}"
+      onclick="mMore(!document.body.classList.contains('m-more-open'))">{{ icons.icon('more', 20) }} More</button>
+  </nav>
+  <script>
+  function mMore(open){
+    document.body.classList.toggle('m-more-open', open);
+    document.getElementById('m-more-btn').setAttribute('aria-expanded', open);
+  }
+  </script>
+
+  {% if request.query_params.get('msg') %}
+  <div class="toast" id="toast">{{ request.query_params.get('msg') }}</div>
+  <script>setTimeout(() => document.getElementById('toast').remove(), 3200);</script>
+  {% endif %}
+  {% block scripts %}{% endblock %}
+</body>
+</html>

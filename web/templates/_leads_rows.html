@@ -1,0 +1,59 @@
+{# The results half of the pipeline table: the rows, the pager, and the
+   round-trip fields that depend on the current filters. Rendered inside
+   leads_table.html on a normal load, and returned on its own (route
+   /pipeline?partial=1) to swap results in as you type. #}
+{% import "_icons.html" as icons %}
+<input type="hidden" name="back" value="{{ current_url }}">
+<span id="resultsummary" hidden>{{ total }} lead{{ '' if total == 1 else 's' }}{{ ' matching your filters' if filtered else '' }}.</span>
+
+<div class="card table-card">
+  {% if rows %}
+  <table class="table leads-table">
+    <tr>
+      <th class="chk"><input type="checkbox" id="selall" title="Select page"></th>
+      <th>Name</th><th>City</th><th>Score</th><th>Status</th><th>Reach</th><th>Updated</th>
+    </tr>
+    {% for lead in rows %}
+    <tr>
+      <td class="chk"><input type="checkbox" class="rowchk" name="lead_id" value="{{ lead.id }}"></td>
+      <td>
+        <a href="/lead/{{ lead.id }}" class="lead-name">{{ lead.name }}</a>
+        {% if lead.entity_type == 'person' and (lead.company or lead.title) %}
+        <div class="hint">{{ lead.company or '' }}{{ ' · ' if lead.company and lead.title }}{{ lead.title or '' }}</div>
+        {% endif %}
+      </td>
+      <td>{{ lead.city or '—' }}</td>
+      <td>{% if lead.score is not none %}<span class="score score-{{ lead.score }}">★ {{ lead.score }}</span>{% else %}—{% endif %}</td>
+      <td><span class="badge badge-{{ lead.status }}">{{ lead.status }}</span></td>
+      <td class="reach">
+        {%- if lead.email %}<span class="email-ok" title="{{ lead.email }}">✓</span>{% endif -%}
+        {%- for platform, url in (lead.socials or {}).items() %}
+        <a class="social-link" href="{{ url|safe_href }}" target="_blank" rel="noopener"
+           title="{{ platform }}">{{ icons.icon(platform, 14) }}</a>
+        {%- endfor -%}
+        {%- if not lead.email and not lead.socials %}<span class="hint">—</span>{% endif -%}
+      </td>
+      <td class="when">{{ (lead.updated_at or '')[:10] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <div class="big">🔍</div>
+    <div class="t">No leads match</div>
+    {% if filtered %}Try loosening a filter, or <a href="/pipeline">clear them all</a>.{% else %}Find some from the Home page first.{% endif %}
+  </div>
+  {% endif %}
+</div>
+
+{% if pages > 1 %}
+<div class="pagination">
+  {% if page > 1 %}
+  <a class="btn btn-ghost btn-sm" href="/pipeline?{{ filter_qs }}{{ '&' if filter_qs }}page={{ page - 1 }}">← Prev</a>
+  {% endif %}
+  <span>Page {{ page }} of {{ pages }}</span>
+  {% if page < pages %}
+  <a class="btn btn-ghost btn-sm" href="/pipeline?{{ filter_qs }}{{ '&' if filter_qs }}page={{ page + 1 }}">Next →</a>
+  {% endif %}
+</div>
+{% endif %}

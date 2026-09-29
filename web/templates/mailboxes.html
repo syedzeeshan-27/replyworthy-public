@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Mailboxes · Replyworthy{% endblock %}
+{% block page_title %}Mailboxes{% endblock %}
+{% block page_sub %}<div class="sub">Where your emails send from.</div>{% endblock %}
+{% block content %}
+
+{% if not enc_ready %}
+<div class="banner banner-warn" style="margin-bottom:16px">
+  Mailbox storage isn't set up yet (the encryption key is missing from the
+  server settings). Connecting mailboxes is disabled until the admin adds it.
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom:18px">
+  <div class="hd"><h3>Sending mode</h3>
+    {% if ws_live %}<span class="chip chip-live">LIVE</span>
+    {% else %}<span class="chip chip-dry">PRACTICE</span>{% endif %}
+  </div>
+  {% if ws_live %}
+  <p class="note">Emails really go out, from your connected mailboxes, inside
+  the daily limits below. You can always step back:</p>
+  <form method="post" action="/mailboxes/practice">
+    <button type="submit" class="btn-ghost">Switch back to practice mode</button>
+  </form>
+  {% else %}
+  <p class="note">In practice mode everything works, but no email actually
+  leaves. To send for real, finish this checklist:</p>
+  {% if golive_missing %}
+  <ul class="note" style="margin:8px 0 8px 18px">
+    {% for item in golive_missing %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+  {% else %}
+  <p class="note">Everything on the checklist is done. One last thing:</p>
+  {% endif %}
+  <form method="post" action="/mailboxes/golive" style="margin-top:8px">
+    <label style="display:flex;gap:8px;align-items:flex-start;font-weight:400">
+      <input type="checkbox" name="warmup_ack" value="1" style="width:auto;margin-top:3px">
+      <span class="note" style="margin:0">I understand a new mailbox starts at
+      about 5 emails a day and ramps up over 2 to 3 weeks.</span>
+    </label>
+    <button type="submit" style="margin-top:12px" {{ 'disabled' if golive_missing else '' }}>Go live</button>
+  </form>
+  {% endif %}
+  {% if is_admin and global_dry %}
+  <p class="note" style="margin-top:10px">Admin note: the platform master
+  switch (DRY_RUN in .env) is still on, so nothing sends live anywhere until
+  you flip it after warmup.</p>
+  {% endif %}
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>Your sender details</h3>
+    <p class="note">The postal address appears in the footer of every email
+    (the law requires it). The alert email is where we warn you if a mailbox
+    breaks or a hot lead replies.</p>
+    <form method="post" action="/mailboxes/identity">
+      <label for="paddr">Business postal address</label>
+      <input type="text" id="paddr" name="postal_address"
+             value="{{ workspace.postal_address or '' }}"
+             placeholder="e.g. 123 Main St, Suite 4, Austin TX 78701">
+      <label for="aemail">Alert email</label>
+      <input type="email" id="aemail" name="alert_email"
+             value="{{ workspace.alert_email or '' }}"
+             placeholder="you@yourcompany.com">
+      <button type="submit" style="margin-top:12px">Save</button>
+    </form>
+  </div>
+
+  <div class="card">
+    <h3>Before you go live</h3>
+    <ul class="note" style="margin:0 0 0 18px">
+      <li><b>SPF, DKIM and DMARC</b>: three DNS records that prove your
+        emails are really from you. Google Workspace sets SPF and DKIM up in
+        Admin console under Apps, Google Workspace, Gmail, Authenticate email.
+        Your domain host's help pages cover the rest.</li>
+      <li><b>Test it</b>: send one email to
+        <a href="https://www.mail-tester.com" target="_blank" rel="noopener">mail-tester.com</a>
+        and aim for 9/10 or better.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" style="margin:18px 0">
+  <h3>Connected mailboxes</h3>
+  {% if boxes %}
+  <div class="table-scroll">
+  <table class="table">
+    <tr><th>Address</th><th>Status</th><th>Allowed today</th><th>Daily cap</th><th></th></tr>
+    {% for b in boxes %}
+    <tr>
+      <td style="font-weight:650">{{ b.address }}
+        {% if b.last_error and b.status == 'error' %}
+        <div class="hint" style="color:#b3261e;max-width:340px">{{ b.last_error }}</div>
+        {% endif %}
+      </td>
+      <td>
+        {% if b.status == 'active' %}<span class="badge badge-interested">active</span>
+        {% elif b.status == 'error' %}<span class="badge badge-needs_human">error</span>
+        {% else %}<span class="badge badge-new">{{ b.status }}</span>{% endif %}
+      </td>
+      <td>{{ b.today_cap }}
+        {% if b.ramp is not none %}<div class="hint">warmup ramp: max {{ b.ramp }}/day right now</div>{% endif %}
+      </td>
+      <td>
+        <form method="post" action="/mailboxes/{{ b.id }}/cap" style="display:flex;gap:6px;align-items:center">
+          <input type="number" name="daily_cap" value="{{ b.daily_cap }}" min="1" max="500" style="width:70px;padding:5px 8px">
+          <button type="submit" class="btn-sm btn-ghost">Set</button>
+        </form>
+      </td>
+      <td style="white-space:nowrap">
+        <form method="post" action="/mailboxes/{{ b.id }}/verify" style="display:inline">
+          <button type="submit" class="btn-sm btn-ghost">Re-check</button>
+        </form>
+        <form method="post" action="/mailboxes/{{ b.id }}/delete" style="display:inline"
+              onsubmit="return confirm('Remove {{ b.address }}? Its stored login is deleted too.')">
+          <button type="submit" class="btn-sm btn-danger">Remove</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <div class="big">📮</div>
+    <div class="t">No mailbox connected yet</div>
+    Connect one below. Everything stays in practice mode until you do.
+  </div>
+  {% endif %}
+</div>
+
+{% if enc_ready %}
+<div class="card">
+  <h3>Connect a mailbox</h3>
+  <form method="post" action="/mailboxes/create" id="connect-form">
+    <label>Provider</label>
+    <div style="display:flex;gap:16px;margin:4px 0 10px">
+      <label style="display:flex;gap:6px;align-items:center;font-weight:400">
+        <input type="radio" name="preset" value="gmail" checked style="width:auto"> Gmail / Google Workspace</label>
+      <label style="display:flex;gap:6px;align-items:center;font-weight:400">
+        <input type="radio" name="preset" value="custom" style="width:auto"> Other (SMTP/IMAP)</label>
+    </div>
+
+    <div id="gmail-help" class="note" style="margin-bottom:10px">
+      Gmail needs an <b>app password</b> (your normal password won't work):
+      <ol style="margin:6px 0 0 18px">
+        <li>Open <a href="https://myaccount.google.com/security" target="_blank" rel="noopener">myaccount.google.com/security</a>
+          and turn ON <b>2-Step Verification</b> (skip if already on).</li>
+        <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener">myaccount.google.com/apppasswords</a>.</li>
+        <li>Type a name like "Replyworthy", press <b>Create</b>.</li>
+        <li>Copy the 16-character password it shows and paste it below
+          (spaces don't matter).</li>
+      </ol>
+    </div>
+
+    <label for="maddr">Email address</label>
+    <input type="email" id="maddr" name="address" placeholder="outreach@yourdomain.com" required>
+    <label for="mpass">App password</label>
+    <input type="password" id="mpass" name="password" autocomplete="new-password" required>
+    <p class="hint">Stored encrypted. We only use it to send your campaigns and read replies.</p>
+
+    <div id="custom-fields" style="display:none">
+      <div class="grid-2">
+        <div>
+          <label for="shost">SMTP server (sending)</label>
+          <input type="text" id="shost" name="smtp_host" placeholder="smtp.yourhost.com">
+          <label for="sport">SMTP port</label>
+          <input type="number" id="sport" name="smtp_port" value="465" style="max-width:120px">
+        </div>
+        <div>
+          <label for="ihost">IMAP server (reading replies)</label>
+          <input type="text" id="ihost" name="imap_host" placeholder="imap.yourhost.com">
+          <label for="iport">IMAP port</label>
+          <input type="number" id="iport" name="imap_port" value="993" style="max-width:120px">
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" style="margin-top:12px">Connect and check</button>
+    <p class="hint">We test it right away: log in, send one email to itself,
+    and read it back. Takes a few seconds.</p>
+  </form>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const form = document.getElementById('connect-form');
+  if (form) {
+    const custom = document.getElementById('custom-fields');
+    const help = document.getElementById('gmail-help');
+    form.querySelectorAll('input[name="preset"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const isCustom = form.preset.value === 'custom';
+        custom.style.display = isCustom ? '' : 'none';
+        help.style.display = isCustom ? 'none' : '';
+      });
+    });
+  }
+</script>
+{% endblock %}

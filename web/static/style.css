@@ -1,0 +1,548 @@
+/* Replyworthy design system — dark sidebar + light content SaaS shell.
+   Tokens first; components below. No build step, no framework. */
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --primary:#4361ee;
+  --primary-strong:#3a56d4;
+  --primary-soft:#e6ebff;
+  --sidebar-bg:#141b2e;
+  --sidebar-fg:#9aa5c4;
+  --sidebar-active:#ffffff;
+  --content-bg:#f4f6fb;
+  --card-bg:#ffffff;
+  --ink:#17203a;
+  --ink-soft:#5b6478;
+  --ink-faint:#98a0b3;
+  --line:#e6e9f2;
+  --radius:10px;
+  --radius-sm:7px;
+  --shadow:0 1px 3px rgba(23,32,58,.07),0 6px 18px rgba(23,32,58,.05);
+  --shadow-lift:0 4px 12px rgba(23,32,58,.10),0 12px 32px rgba(23,32,58,.08);
+  --font:'Inter',-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+
+  --ok:#16a34a;      --ok-soft:#dcfce7;
+  --warn:#b45309;    --warn-soft:#fef3c7;
+  --danger:#dc2626;  --danger-soft:#fee2e2;
+  --info:#2563eb;    --info-soft:#e0eaff;
+  --purple:#7c3aed;  --purple-soft:#ede9fe;
+  --emerald:#059669; --emerald-soft:#d1fae5;
+  --muted:#64748b;   --muted-soft:#eef1f6;
+}
+
+html{font-size:15px}
+body{
+  font-family:var(--font);
+  background:var(--content-bg);
+  color:var(--ink);
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+a{color:var(--primary);text-decoration:none}
+a:hover{text-decoration:underline}
+code{background:var(--muted-soft);padding:1px 6px;border-radius:5px;font-size:.85em}
+
+/* ---------- App shell ---------- */
+.shell{display:grid;grid-template-columns:228px 1fr;min-height:100vh}
+
+.sidebar{
+  background:var(--sidebar-bg);
+  display:flex;flex-direction:column;
+  padding:20px 14px;
+  position:sticky;top:0;height:100vh;
+}
+.brand{
+  color:#fff;font-weight:800;font-size:1.15rem;letter-spacing:.3px;
+  display:flex;align-items:center;gap:9px;padding:2px 10px 18px;
+}
+.brand .logo{
+  width:28px;height:28px;border-radius:8px;flex:none;
+  background:linear-gradient(135deg,var(--primary),#7c3aed);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:.85rem;font-weight:800;
+}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav a{
+  display:flex;align-items:center;gap:10px;
+  color:var(--sidebar-fg);padding:9px 10px;border-radius:8px;
+  font-weight:600;font-size:.92rem;
+}
+.nav a:hover{color:#fff;background:rgba(255,255,255,.06);text-decoration:none}
+.nav a.active{color:var(--sidebar-active);background:rgba(67,97,238,.28)}
+.nav .ico{width:18px;flex:none;opacity:.9}
+/* Icons are inline SVG (templates/_icons.html) and inherit currentColor. */
+.ico{display:inline-flex;align-items:center;justify-content:center}
+.i{display:block;flex:none}
+.nav .count{
+  margin-left:auto;background:var(--danger);color:#fff;
+  font-size:.7rem;font-weight:700;border-radius:9px;padding:1px 7px;
+}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding:0 4px}
+
+.chip{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:.72rem;font-weight:700;letter-spacing:.4px;
+  padding:4px 10px;border-radius:999px;width:max-content;
+}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.chip-dry{background:rgba(245,158,11,.15);color:#fbbf24}
+.chip-live{background:rgba(22,163,74,.18);color:#4ade80}
+.chip-paused{background:rgba(220,38,38,.18);color:#f87171}
+
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{
+  display:flex;align-items:center;gap:14px;
+  padding:18px 28px 0;
+}
+.topbar h1{font-size:1.35rem;font-weight:800;letter-spacing:-.2px}
+.topbar .sub{color:var(--ink-soft);font-size:.85rem;margin-top:2px}
+.topbar .spacer{flex:1}
+.content{padding:20px 28px 48px;display:flex;flex-direction:column;gap:18px}
+
+/* ---------- Cards / stats ---------- */
+.card{
+  background:var(--card-bg);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:18px 20px;
+}
+.card h2,.card h3{font-size:1rem;font-weight:700;margin-bottom:12px}
+.card .hd{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.card .hd h2,.card .hd h3{margin:0}
+.card .hd .spacer{flex:1}
+
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px}
+.stat{
+  background:var(--card-bg);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:14px 16px;
+}
+.stat .v{font-size:1.55rem;font-weight:800;letter-spacing:-.5px}
+.stat .l{color:var(--ink-soft);font-size:.78rem;font-weight:600;margin-top:2px}
+.stat .s{color:var(--ink-faint);font-size:.72rem;margin-top:4px}
+/* Tiles double as links to the page that acts on the number. */
+a.stat{display:block;color:inherit;text-decoration:none;transition:box-shadow .12s,border-color .12s}
+a.stat:hover{text-decoration:none;color:inherit;
+  border-color:var(--primary);box-shadow:var(--shadow-lift)}
+.stat.accent{border-left:3px solid var(--primary)}
+.stat.hot .v{color:var(--danger)}
+
+/* min-width:0 — grid/flex children default to min-width:auto, so one long
+   unbreakable string inside a card would widen the whole page. */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+.grid-2>*,.content>*{min-width:0}
+@media(max-width:1100px){.grid-2{grid-template-columns:1fr}}
+
+/* ---------- Buttons / forms ---------- */
+button,.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  background:var(--primary);color:#fff;border:none;cursor:pointer;
+  border-radius:var(--radius-sm);font-family:var(--font);
+  font-size:.9rem;font-weight:650;padding:9px 18px;
+  transition:background .12s,box-shadow .12s;
+  text-decoration:none;
+}
+button:hover,.btn:hover{background:var(--primary-strong);text-decoration:none;color:#fff}
+.btn-ghost{background:transparent;color:var(--ink-soft);border:1px solid var(--line)}
+.btn-ghost:hover{background:var(--muted-soft);color:var(--ink)}
+.btn-danger{background:var(--danger)}
+.btn-danger:hover{background:#b91c1c}
+.btn-ghost-danger{background:transparent;color:var(--danger);border:1px solid var(--danger-soft)}
+.btn-ghost-danger:hover{background:var(--danger-soft);color:var(--danger)}
+.btn-sm{padding:5px 12px;font-size:.8rem;border-radius:6px}
+/* Compact action buttons in the topbar — icon + short label, icon-only on phones. */
+.btn-act{padding:8px 14px;font-size:.85rem}
+
+label{display:block;font-weight:650;margin:14px 0 5px;font-size:.85rem}
+input[type="text"],input[type="number"],select,textarea{
+  width:100%;padding:9px 12px;background:#fff;
+  border:1px solid #d5dae6;border-radius:var(--radius-sm);
+  font-size:.92rem;font-family:var(--font);color:var(--ink);
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:var(--primary);
+  box-shadow:0 0 0 3px rgba(67,97,238,.14);
+}
+select{width:auto;cursor:pointer}
+textarea{min-height:76px;resize:vertical}
+.checkbox-row{display:flex;align-items:center;gap:8px;font-weight:550;margin-top:16px;cursor:pointer;font-size:.9rem}
+.checkbox-row input{width:auto;margin:0}
+.hint{color:var(--ink-faint);font-size:.78rem;margin-top:4px}
+
+/* ---------- Badges ---------- */
+.badge{
+  display:inline-block;padding:2px 9px;border-radius:999px;
+  font-size:.72rem;font-weight:700;letter-spacing:.2px;white-space:nowrap;
+}
+.badge-new,.badge-queued{background:var(--muted-soft);color:var(--muted)}
+.badge-contacted{background:var(--info-soft);color:var(--info)}
+.badge-interested{background:var(--ok-soft);color:var(--ok)}
+.badge-needs_human{background:var(--danger-soft);color:var(--danger)}
+.badge-meeting{background:var(--purple-soft);color:var(--purple)}
+.badge-won{background:var(--emerald-soft);color:var(--emerald)}
+.badge-lost,.badge-not_interested,.badge-unsubscribed,.badge-bounced,.badge-excluded,
+.badge-bounce,.badge-unsubscribe{background:var(--muted-soft);color:var(--muted)}
+.badge-out_of_office,.badge-wrong_person{background:var(--warn-soft);color:var(--warn)}
+
+.pill{
+  display:inline-block;background:var(--primary-soft);color:#2b3a8f;
+  border-radius:999px;padding:3px 11px;font-size:.76rem;font-weight:550;
+  margin:2px 4px 2px 0;
+}
+
+.banner{
+  border-radius:var(--radius);padding:10px 16px;
+  font-size:.85rem;font-weight:650;display:flex;align-items:center;gap:10px;
+}
+.banner-warn{background:var(--warn-soft);color:var(--warn)}
+.banner-danger{background:var(--danger-soft);color:var(--danger)}
+.banner-ok{background:var(--ok-soft);color:var(--ok)}
+.alert{background:var(--danger-soft);color:var(--danger);padding:10px 14px;border-radius:var(--radius-sm);font-size:.88rem;font-weight:600}
+
+/* ---------- Tables ---------- */
+.table{width:100%;border-collapse:collapse;font-size:.88rem}
+.table th{
+  text-align:left;color:var(--ink-faint);font-size:.72rem;
+  font-weight:700;text-transform:uppercase;letter-spacing:.6px;
+  padding:8px 10px;border-bottom:1px solid var(--line);
+}
+.table td{padding:10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:#fafbfe}
+
+/* ---------- Leads table view (the one pipeline view) ---------- */
+.score{
+  display:inline-block;font-size:.68rem;font-weight:800;
+  padding:1px 7px;border-radius:6px;background:var(--muted-soft);color:var(--muted);
+}
+.score-4,.score-5{background:var(--warn-soft);color:var(--warn)}
+/* Status snapshot above the pipeline filters; each badge is a filter link. */
+.snapshot{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:14px}
+.snapshot .badge{cursor:pointer;border:1px solid transparent}
+.snapshot .badge:hover{text-decoration:none;filter:brightness(.96)}
+.snapshot .badge.on{border-color:currentColor}
+
+.filterbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+.filterbar input[type="search"]{
+  flex:1 1 220px;min-width:180px;padding:8px 12px;background:#fff;
+  border:1px solid #d5dae6;border-radius:var(--radius-sm);
+  font-size:.9rem;font-family:var(--font);color:var(--ink);
+}
+.filterbar select{padding:8px 10px;font-size:.85rem}
+/* `hidden` must beat the display rules on .btn / .bulkbar (attribute
+   selectors alone lose to a class). The Clear button and the bulk bar both
+   get shown and hidden from JS as the filters and ticks change. */
+.btn[hidden],.bulkbar[hidden]{display:none}
+.bulkbar{
+  display:flex;gap:10px;align-items:center;margin-bottom:10px;
+  background:var(--primary-soft);border:1px solid var(--primary);
+  border-radius:var(--radius-sm);padding:7px 12px;
+  font-size:.85rem;font-weight:650;color:var(--primary-strong);
+}
+.bulkbar select{padding:5px 9px;font-size:.82rem;width:auto}
+.table-card{padding:0;overflow:auto;max-height:calc(100vh - 240px)}
+.leads-table th{position:sticky;top:0;background:var(--card-bg);z-index:1}
+.leads-table .chk{width:36px;text-align:center}
+.leads-table .chk input{cursor:pointer}
+.leads-table .lead-name{font-weight:650;color:var(--ink)}
+.leads-table .lead-name:hover{color:var(--primary);text-decoration:none}
+.leads-table .when{color:var(--ink-faint);font-size:.8rem;white-space:nowrap}
+.leads-table .email-ok{color:var(--ok);font-weight:700;cursor:default}
+.pagination{
+  display:flex;gap:12px;align-items:center;justify-content:center;
+  margin-top:14px;color:var(--ink-soft);font-size:.85rem;
+}
+
+/* ---------- Outbox (Sending page) ---------- */
+.outbox{list-style:none;display:flex;flex-direction:column}
+/* The whole row is the tap target — it opens that lead. */
+.ob-row{display:flex;align-items:center;gap:4px 10px;padding:9px 8px;
+  margin:0 -8px;border-radius:8px;flex-wrap:wrap;color:inherit;
+  border-bottom:1px solid var(--line)}
+.outbox li:last-child .ob-row{border-bottom:none}
+a.ob-row:hover{background:var(--muted-soft);text-decoration:none;color:inherit}
+a.ob-row:hover .ob-lead{color:var(--primary)}
+.ob-row .i-clock{color:var(--ink-faint)}
+.ob-main{flex:1 1 160px;min-width:0;display:flex;flex-direction:column}
+.ob-lead{font-weight:650;font-size:.9rem}
+.ob-meta{color:var(--ink-soft);font-size:.78rem;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ob-when{color:var(--ink-faint);font-size:.76rem;margin-left:auto}
+
+/* ---------- Timeline ---------- */
+.timeline{display:flex;flex-direction:column}
+.tl{display:flex;gap:12px;position:relative;padding-bottom:18px}
+.tl:last-child{padding-bottom:0}
+.tl::before{
+  content:"";position:absolute;left:13px;top:30px;bottom:0;width:2px;background:var(--line);
+}
+.tl:last-child::before{display:none}
+.tl .dot{
+  width:28px;height:28px;border-radius:50%;flex:none;z-index:1;
+  display:flex;align-items:center;justify-content:center;font-size:.8rem;
+  background:var(--muted-soft);
+}
+.tl .dot-send{background:var(--info-soft)}
+.tl .dot-reply{background:var(--ok-soft)}
+.tl .dot-note{background:var(--warn-soft)}
+.tl .body{flex:1;min-width:0}
+.tl .when{color:var(--ink-faint);font-size:.74rem}
+.tl .txt{
+  background:#f8f9fd;border:1px solid var(--line);border-radius:8px;
+  padding:9px 12px;font-size:.86rem;white-space:pre-wrap;margin-top:5px;
+  overflow-wrap:break-word;
+}
+
+/* ---------- Queue ---------- */
+.qrow{display:flex;flex-direction:column;gap:8px}
+.qrow .qhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.qrow .qhead a{color:var(--ink);font-weight:700;font-size:1rem}
+.qrow .qhead a:hover{color:var(--primary);text-decoration:none}
+.qrow .meta{color:var(--ink-faint);font-size:.78rem}
+.snippet{
+  background:#f8f9fd;border:1px solid var(--line);border-radius:8px;
+  padding:9px 12px;font-size:.85rem;white-space:pre-wrap;
+  max-height:110px;overflow-y:auto;
+}
+.qactions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.replybox{display:flex;flex-direction:column;gap:8px}
+.replybox textarea{
+  width:100%;border:1px solid var(--line);border-radius:8px;
+  padding:9px 12px;font:inherit;font-size:.9rem;resize:vertical;min-height:64px;
+}
+.replybox textarea:focus{outline:none;border-color:var(--primary)}
+.replyrow{display:flex;align-items:center;gap:10px}
+
+/* ---------- Job progress ---------- */
+.steps{display:flex;flex-direction:column;gap:0}
+.step{display:flex;gap:12px;align-items:flex-start;padding:8px 0}
+.step .ic{
+  width:26px;height:26px;border-radius:50%;flex:none;
+  display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;
+  background:var(--muted-soft);color:var(--ink-faint);
+}
+.step.done .ic{background:var(--ok-soft);color:var(--ok)}
+.step.now .ic{background:var(--primary-soft);color:var(--primary)}
+.step .t{font-weight:650;font-size:.9rem}
+.step .d{color:var(--ink-soft);font-size:.78rem}
+
+.spinner{
+  display:inline-block;width:13px;height:13px;
+  border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;
+  animation:spin .8s linear infinite;vertical-align:middle;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- Misc ---------- */
+.empty-state{
+  text-align:center;color:var(--ink-faint);padding:44px 10px;
+}
+.empty-state .big{font-size:1.9rem;margin-bottom:6px}
+.empty-state .t{font-weight:650;color:var(--ink-soft)}
+
+.toast{
+  position:fixed;bottom:22px;right:22px;z-index:50;
+  background:var(--ink);color:#fff;font-size:.86rem;font-weight:600;
+  padding:11px 18px;border-radius:9px;box-shadow:var(--shadow-lift);
+  animation:toast-in .18s ease-out;
+}
+@keyframes toast-in{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+
+.error-detail{
+  background:#f8f8f8;padding:12px;border-radius:var(--radius-sm);
+  font-size:.78rem;overflow-x:auto;white-space:pre-wrap;max-height:220px;
+}
+
+.facts{width:100%;border-collapse:collapse}
+.facts td{padding:7px 4px;border-bottom:1px solid var(--line);font-size:.88rem}
+.facts tr:last-child td{border-bottom:none}
+.facts td:first-child{color:var(--ink-faint);width:118px;font-size:.8rem;font-weight:600}
+
+.copybtn{background:var(--muted-soft);color:var(--ink-soft);border:none}
+.copybtn:hover{background:#e2e6ef;color:var(--ink)}
+
+/* Standalone page (unsubscribe) */
+.solo{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:var(--content-bg);padding:20px;
+}
+.solo .card{max-width:430px;text-align:center;padding:36px 30px}
+.solo h2{font-size:1.25rem;margin-bottom:8px}
+.solo p{color:var(--ink-soft);font-size:.92rem}
+
+/* ---------- Responsive ---------- */
+/* Mobile chrome (top bar, bottom tabs, More sheet) exists only <=900px. */
+.m-top,.m-tabs,.m-sheet,.m-backdrop{display:none}
+
+@media(max-width:900px){
+  :root{--m-tabs-h:52px}
+  .shell{grid-template-columns:1fr}
+  .sidebar{display:none}
+
+  /* slim sticky top bar */
+  .m-top{display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:40;
+    background:var(--sidebar-bg);padding:10px 14px;
+    padding-top:calc(10px + env(safe-area-inset-top))}
+  .m-logo{width:28px;height:28px;border-radius:8px;flex:none;
+    background:linear-gradient(135deg,var(--primary),#7c3aed);
+    display:flex;align-items:center;justify-content:center;
+    color:#fff;font-size:.85rem;font-weight:800;text-decoration:none}
+  .m-logo:hover{text-decoration:none;color:#fff}
+  .m-chips{margin-left:auto;display:flex;gap:6px}
+
+  /* fixed bottom tab bar */
+  .m-tabs{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:45;
+    background:var(--card-bg);border-top:1px solid var(--line);
+    height:calc(var(--m-tabs-h) + env(safe-area-inset-bottom));
+    padding-bottom:env(safe-area-inset-bottom)}
+  .m-tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;font-size:.62rem;font-weight:650;color:var(--ink-faint);
+    background:none;border:none;border-radius:0;position:relative;padding:0}
+  .m-tab .ico{font-size:1.05rem;line-height:1}
+  .m-tab:hover{background:none;color:var(--ink-soft);text-decoration:none}
+  .m-tab.active{color:var(--primary)}
+  .m-tab .count{position:absolute;top:4px;left:calc(50% + 6px);
+    background:var(--danger);color:#fff;font-size:.62rem;font-weight:700;
+    border-radius:9px;padding:0 5px;line-height:1.5}
+
+  /* More sheet + backdrop (body.m-more-open) */
+  body.m-more-open .m-backdrop{display:block;position:fixed;inset:0;z-index:44;
+    background:rgba(23,32,58,.45)}
+  body.m-more-open .m-sheet{display:flex;flex-direction:column;position:fixed;
+    left:0;right:0;bottom:calc(var(--m-tabs-h) + env(safe-area-inset-bottom));z-index:46;
+    background:var(--card-bg);border-radius:14px 14px 0 0;
+    padding:8px 10px 12px;box-shadow:var(--shadow-lift);
+    animation:sheet-in .18s ease-out}
+
+  /* Account card + list rows. Class selectors (not element ones) so the
+     global button styling doesn't bleed into the logout row. */
+  .sh-user{display:flex;align-items:center;gap:12px;padding:12px 8px;
+    border-bottom:1px solid var(--line);margin-bottom:6px}
+  .sh-avatar{width:40px;height:40px;border-radius:50%;flex:none;
+    background:var(--primary-soft);color:var(--primary-strong);
+    font-weight:800;font-size:.95rem;
+    display:flex;align-items:center;justify-content:center}
+  .sh-id{min-width:0;display:flex;flex-direction:column}
+  .sh-name{font-weight:700;font-size:.95rem;color:var(--ink)}
+  .sh-email{font-size:.78rem;color:var(--ink-faint);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .sh-row{display:flex;align-items:center;justify-content:flex-start;gap:12px;
+    width:100%;padding:12px 8px;border-radius:8px;color:var(--ink);
+    font-weight:600;font-size:.92rem;font-family:var(--font);
+    background:none;border:none;text-align:left;cursor:pointer}
+  a.sh-row:hover,button.sh-row:hover{background:var(--muted-soft);text-decoration:none}
+  .sh-row.active{color:var(--primary);background:var(--primary-soft)}
+  .sh-row .i-chevron-right{margin-left:auto;color:var(--ink-faint)}
+  .sh-sep{border-top:1px solid var(--line);margin:6px 0}
+  .sh-ws form{margin:0 0 0 auto}
+  /* Two classes deep on purpose: .ws-switch select is skinned dark for the
+     desktop sidebar and is defined later in this file. */
+  .m-sheet .sh-ws select{width:auto;max-width:180px;background:var(--muted-soft);
+    border:none;border-radius:8px;padding:8px 10px;font-size:.85rem;color:var(--ink)}
+  .sh-danger{color:var(--danger)}
+  button.sh-danger:hover{background:var(--danger-soft);color:var(--danger)}
+
+  /* action buttons go icon-only; title/aria-label carry the meaning */
+  .btn-act .lbl{display:none}
+  .btn-act{padding:9px 11px}
+
+  /* Snapshot badges are filter links here: thumb-sized, and kept to one
+     swipeable row so eight statuses don't push the table off-screen. */
+  .snapshot{gap:8px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;padding-bottom:2px}
+  .snapshot::-webkit-scrollbar{display:none}
+  .snapshot .badge{padding:8px 13px;font-size:.78rem;flex:none}
+
+  /* topbar actions wrap under the title; content clears the fixed bar */
+  .topbar{padding:14px 14px 0;flex-wrap:wrap}
+  .topbar .spacer{display:none}
+  .topbar>div:first-child{flex:1 1 100%}
+  .content{padding:16px 14px calc(var(--m-tabs-h) + 18px + env(safe-area-inset-bottom))}
+
+  /* tables */
+  .table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-scroll>.table{width:max-content;min-width:100%}
+  .table th,.table td{padding:8px}
+  .table-card{max-height:none}
+  .filterbar select{flex:1 1 40%}
+
+  /* toast above the tab bar (desktop position would sit under it) */
+  .toast{left:14px;right:14px;bottom:calc(var(--m-tabs-h) + 12px + env(safe-area-inset-bottom))}
+}
+@keyframes sheet-in{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+
+/* ---------- Auth pages + workspace switcher (V2 Stage 4) ---------- */
+.auth-body{background:var(--content-bg);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.auth-wrap{width:100%;max-width:400px;padding:24px}
+.auth-brand{
+  color:var(--ink);font-weight:800;font-size:1.3rem;letter-spacing:.3px;
+  display:flex;align-items:center;gap:10px;justify-content:center;margin-bottom:18px;
+}
+.auth-brand .logo{
+  width:32px;height:32px;border-radius:9px;flex:none;background:var(--primary);
+  color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:1rem;
+}
+.auth-card{padding:26px 26px 22px}
+.auth-card h2{margin-bottom:14px;font-size:1.15rem}
+.auth-form{display:flex;flex-direction:column;gap:13px}
+.auth-form label{font-size:.85rem;font-weight:600;color:var(--ink-soft);display:flex;flex-direction:column;gap:5px}
+.auth-form .hint{font-weight:400;color:var(--ink-faint)}
+.auth-form input{width:100%}
+input[type="email"],input[type="password"]{
+  width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  font:inherit;background:#fff;color:var(--ink);
+}
+input[type="email"]:focus,input[type="password"]:focus{
+  outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-soft);
+}
+.auth-form button{margin-top:4px}
+.auth-foot{text-align:center;margin-top:14px;font-size:.85rem;color:var(--ink-soft)}
+.auth-alert{padding:9px 12px;border-radius:var(--radius-sm);font-size:.85rem;margin-bottom:13px}
+.auth-alert-error{background:var(--danger-soft);color:var(--danger)}
+.auth-alert-ok{background:var(--ok-soft);color:var(--ok)}
+
+.user-box{
+  margin-top:auto;padding:10px 10px 4px;border-top:1px solid rgba(255,255,255,.08);
+  font-size:.78rem;color:var(--sidebar-fg);display:flex;flex-direction:column;gap:8px;
+}
+.user-box .user-email{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-box form{margin:0}
+.user-box .btn-logout{
+  background:transparent;color:var(--sidebar-fg);border:1px solid rgba(255,255,255,.15);
+  padding:4px 10px;font-size:.75rem;border-radius:6px;width:100%;
+}
+.user-box .btn-logout:hover{background:rgba(255,255,255,.08);color:#fff}
+.ws-switch select{
+  width:100%;padding:5px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.15);
+  background:var(--sidebar-bg);color:var(--sidebar-active);font-size:.78rem;
+}
+.ws-name{color:var(--sidebar-active);font-weight:600}
+
+/* Billing (V2 Stage 5) */
+.note{color:var(--ink-soft);font-size:.88rem;margin-top:8px;line-height:1.5}
+
+/* ---------- Social reach + DM queue (social links + DM queue) ---------- */
+.reach{white-space:nowrap}
+.reach .email-ok{margin-right:4px}
+.social-link{display:inline-flex;align-items:center;gap:4px;color:var(--ink-faint);margin:0 3px;vertical-align:middle}
+.social-link:hover{color:var(--primary)}
+.facts .reach .hint{margin-top:4px;white-space:normal}
+
+.dm-list{display:flex;flex-direction:column;gap:12px}
+.dm-card .dm-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.dm-who{display:flex;flex-direction:column;min-width:180px}
+.dm-who .lead-name{font-weight:650;color:var(--ink)}
+.dm-who .lead-name:hover{color:var(--primary)}
+.dm-links{display:flex;gap:8px;margin-left:auto}
+/* :not([hidden]) so the hidden attribute keeps winning until a DM exists —
+   a bare display:flex would override it. */
+.dm-result:not([hidden]){margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.dm-result .dm-text{
+  width:100%;padding:10px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  font:inherit;font-size:.9rem;resize:vertical;background:var(--card-bg);color:var(--ink);
+}
+.dm-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dm-sent-form{display:flex;gap:8px;align-items:center}
+.dm-sent-form select{padding:7px 9px;font-size:.85rem}
+.dm-error{color:var(--danger)}
+.dm-flag{color:var(--warn)}

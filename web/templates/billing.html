@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Billing · Replyworthy{% endblock %}
+{% block page_title %}Billing{% endblock %}
+{% block page_sub %}<div class="sub">Your plan, credits and payment history.</div>{% endblock %}
+{% block content %}
+
+{% if blocked %}
+<div class="banner banner-danger" style="margin-bottom:16px">{{ blocked }}</div>
+{% endif %}
+
+<div class="stats-grid" style="margin-bottom:18px">
+  <div class="stat accent"><div class="v">{{ plan.label }}</div><div class="l">Current plan</div></div>
+  <div class="stat"><div class="v">{{ balance }}</div><div class="l">Credits left</div></div>
+  {% if plan_key == 'trial' and trial_expires %}
+  <div class="stat"><div class="v">{{ trial_expires[:10] }}</div><div class="l">Trial ends</div></div>
+  {% endif %}
+</div>
+
+<div class="card" style="margin-bottom:18px">
+  <h3>How credits work</h3>
+  <p class="note">1 credit = one business lead found and researched for you.
+  People leads cost 2 credits each (the contact database charges more for
+  them) and are available on Growth and Scale. Leads that get filtered out
+  never cost anything. Unused credits roll over one month, up to your
+  monthly amount (two months on Scale).</p>
+</div>
+
+<div class="card" style="margin-bottom:18px">
+  <h3>Plans</h3>
+  {% if not provider_ready %}
+  <div class="banner banner-warn" style="margin:10px 0">
+    Payments aren't connected yet. The payment account (Dodo Payments) is
+    still being set up; upgrade buttons will appear here as soon as it's live.
+  </div>
+  {% endif %}
+  <div class="table-scroll">
+  <table class="table">
+    <tr><th>Plan</th><th>Price</th><th>Credits / month</th><th>Cost per lead</th>
+        <th>Offer profiles</th><th>Active campaigns</th><th>Person leads</th><th></th></tr>
+    {% for key in paid_plans %}
+    <tr>
+      <td>{{ plans[key].label }}{% if key == plan_key %} <span class="chip chip-live">current</span>{% endif %}</td>
+      <td>${{ plans[key].price_usd }}/mo</td>
+      <td>{{ plans[key].monthly_credits }}</td>
+      <td>{{ "%.0f"|format(plans[key].price_usd / plans[key].monthly_credits * 100) }}&cent;</td>
+      <td>{{ plans[key].max_offers if plans[key].max_offers is not none else "Unlimited" }}</td>
+      <td>{{ plans[key].max_campaigns if plans[key].max_campaigns is not none else "Unlimited" }}</td>
+      <td>{{ "Yes" if plans[key].person_leads else "&mdash;"|safe }}</td>
+      <td>
+        {% if checkout[key] and key != plan_key %}
+        <a class="btn btn-sm" href="{{ checkout[key] }}">Upgrade</a>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% if provider_ready %}
+  <p class="note">Card changes, invoices and cancellation live in the payment
+  provider's own portal (the link is in your subscription emails). Payments
+  are handled entirely by the provider; we never see your card.</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Recent credit activity</h3>
+  {% if ledger %}
+  <div class="table-scroll">
+  <table class="table">
+    <tr><th>When</th><th>Change</th><th>What</th></tr>
+    {% for row in ledger %}
+    <tr>
+      <td>{{ (row.created_at or '')[:16] }}</td>
+      <td>{{ '+' if row.delta > 0 else '' }}{{ row.delta }}</td>
+      <td>{{ reason_labels.get(row.reason, row.reason) }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+  {% else %}
+  <p class="note">No credit activity yet.</p>
+  {% endif %}
+</div>
+
+{% if is_admin %}
+<p style="margin-top:14px"><a href="/admin/billing">Admin: billing for every workspace</a></p>
+{% endif %}
+{% endblock %}

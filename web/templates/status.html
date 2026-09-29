@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Job {{ job.id }} — Replyworthy{% endblock %}
+{% block head %}
+{% if job.status in ("queued", "running") %}
+<meta http-equiv="refresh" content="5">
+{% endif %}
+{% endblock %}
+{% block page_title %}{{ job.category }} in {{ job.city }}{% endblock %}
+{% block page_sub %}<div class="sub">Limit {{ job.limit }} · job <code>{{ job.id }}</code>
+{% if job.spec and job.spec.get('raw_query') %} · you asked: “{{ job.spec.get('raw_query') }}”{% endif %}</div>{% endblock %}
+
+{% block content %}
+{% if job.status == "awaiting_choice" %}
+{# ---- The approve gate: real count first, then the owner chooses ---- #}
+<div class="card" style="max-width:720px">
+  {% if gate_error %}
+  <div class="banner banner-danger" style="margin-bottom:14px">{{ gate_error }}</div>
+  {% endif %}
+  <h2 style="margin:0 0 4px">Found {{ job.total_found }} in {{ job.city }}</h2>
+  <p class="hint" style="margin:0 0 14px">
+    Here’s what the search actually turned up. Nothing has been charged yet —
+    download the plain list for free, or continue to score them and write the
+    emails.</p>
+
+  {% if job.funnel %}
+  <table class="facts" style="margin:0 0 14px">
+    <tr><td>Found on Google Maps</td><td style="font-weight:700">{{ job.funnel.found }}</td></tr>
+    {% if job.funnel.dropped_dupes %}<tr><td>Same business listed twice (merged)</td><td>{{ job.funnel.dropped_dupes }}</td></tr>{% endif %}
+    {% if job.funnel.dropped_chains %}<tr><td>Chains / duplicate listings removed</td><td>{{ job.funnel.dropped_chains }}</td></tr>{% endif %}
+    <tr><td>On your list</td><td style="font-weight:700">{{ job.funnel.delivered }}</td></tr>
+  </table>
+  {% if job.already_seen %}
+  <p class="hint" style="margin:-6px 0 14px">{{ job.already_seen }} of these you already found in an earlier search.</p>
+  {% endif %}
+  {% endif %}
+
+  {% if preview_rows %}
+  <p style="font-weight:650;margin:0 0 6px">Preview — first {{ preview_rows|length }} of {{ job.funnel.delivered }}</p>
+  <div style="overflow-x:auto;margin-bottom:16px">
+    <table class="facts" style="width:100%">
+      <tr>{% for h in preview_headers %}<th style="text-align:left;font-weight:700">{{ h }}</th>{% endfor %}</tr>
+      {% for row in preview_rows %}
+      <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <form method="post" action="/jobs/{{ job.id }}/list" style="margin:0">
+      <button type="submit" class="btn">⬇ Download the list — free</button>
+    </form>
+    <form method="post" action="/jobs/{{ job.id }}/continue" style="margin:0">
+      <button type="submit" class="btn">Continue → score &amp; write emails</button>
+    </form>
+    <form method="post" action="/jobs/{{ job.id }}/cancel" style="margin:0">
+      <button type="submit" class="btn btn-ghost">Cancel</button>
+    </form>
+  </div>
+  <p class="hint" style="margin:12px 0 0">This preview is held for {{ gate_ttl_minutes }} minutes.</p>
+</div>
+
+{% elif job.status == "canceled" %}
+<div class="card" style="max-width:560px">
+  <div class="banner" style="margin-bottom:14px">Search canceled — no credits were used.</div>
+  <a class="btn" href="/">New search</a>
+</div>
+
+{% else %}
+<div class="card" style="max-width:560px">
+  {% if job.status == "error" %}
+  <div class="banner banner-danger" style="margin-bottom:14px">Something went wrong</div>
+  <pre class="error-detail">{{ job.error_msg }}</pre>
+  {% else %}
+  {% set step3 = 'Building your list' if job.phase == 'list' else ('Scoring &amp; writing emails' if job.phase == 'enrich' else 'Scraping, filtering &amp; enriching') %}
+  {% set step4 = 'List ready' if job.phase == 'list' else 'Excel ready' %}
+  <div class="steps">
+    <div class="step done">
+      <div class="ic">✓</div>
+      <div><div class="t">Job created</div></div>
+    </div>
+    <div class="step {{ 'done' if job.status in ('running', 'done') else 'now' }}">
+      <div class="ic">{% if job.status == 'queued' %}<span class="spinner"></span>{% else %}✓{% endif %}</div>
+      <div><div class="t">Queued</div></div>
+    </div>
+    <div class="step {{ 'done' if job.status == 'done' else ('now' if job.status == 'running' else '') }}">
+      <div class="ic">{% if job.status == 'running' %}<span class="spinner"></span>{% elif job.status == 'done' %}✓{% else %}3{% endif %}</div>
+      <div>
+        <div class="t">{{ step3|safe }}</div>
+        {% if job.status == 'running' %}<div class="d">Takes a few minutes — this page refreshes itself.</div>{% endif %}
+      </div>
+    </div>
+    <div class="step {{ 'done' if job.status == 'done' else '' }}">
+      <div class="ic">{{ '✓' if job.status == 'done' else '4' }}</div>
+      <div><div class="t">{{ step4 }}</div></div>
+    </div>
+  </div>
+
+  {% if job.status == "done" %}
+  {% if job.funnel %}
+  <table class="facts" style="margin:14px 0">
+    <tr><td>{{ 'Found in the contact database' if job.source == 'b2b_data_api' else 'Found on Google Maps' }}</td><td style="font-weight:700">{{ job.funnel.found }}</td></tr>
+    <tr><td>Delivered to you</td><td style="font-weight:700">{{ job.funnel.delivered }}</td></tr>
+    {% if job.phase != 'list' %}<tr><td>Hot (score 4–5)</td><td style="font-weight:700">{{ job.hot_leads }}</td></tr>{% endif %}
+  </table>
+  {% set filtered = job.funnel.found - job.funnel.delivered %}
+  {% if filtered > 0 %}
+  <p style="font-weight:650;margin:12px 0 6px">Your agent filtered out {{ filtered }} for you:</p>
+  <ul class="hint" style="margin:0 0 10px 18px">
+    {% for n, label in [
+      (job.funnel.dropped_dupes, 'the same business listed more than once'),
+      (job.funnel.dropped_chains, 'chains or duplicate listings'),
+      (job.funnel.dropped_seen, 'already found in a previous search'),
+      (job.funnel.excluded_equipped, 'already have chat or booking software'),
+      (job.funnel.excluded_non_us, 'no US phone number'),
+      (job.funnel.skipped_no_contact, 'no website or email to reach them'),
+    ] %}{% if n %}
+    <li>{{ n }} · {{ label }}</li>
+    {% endif %}{% endfor %}
+  </ul>
+  {% endif %}
+  {% else %}
+  <table class="facts" style="margin:14px 0">
+    <tr><td>Total leads</td><td style="font-weight:700">{{ job.total_found }}</td></tr>
+    {% if job.phase != 'list' %}<tr><td>Hot (score 4–5)</td><td style="font-weight:700">{{ job.hot_leads }}</td></tr>{% endif %}
+  </table>
+  {% endif %}
+  <div style="display:flex;gap:10px">
+    <a class="btn" href="/jobs/{{ job.id }}/download">⬇ {{ 'Download the list' if job.phase == 'list' else 'Download Excel' }}</a>
+    <a class="btn btn-ghost" href="/pipeline">Open pipeline</a>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+{% endif %}
+
+<p><a href="/">&larr; Back to Home</a></p>
+{% endblock %}

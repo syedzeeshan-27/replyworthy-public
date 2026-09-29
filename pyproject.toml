@@ -1,0 +1,29 @@
+[project]
+name = "leadgen"
+version = "0.1.0"
+description = "WAT-framework lead generation pipeline (Apify -> scrape -> Claude analyze -> score -> CSV)"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31.0",
+    "python-dotenv>=1.0.0",
+    "anthropic>=0.90.0",
+    "firecrawl-py>=1.0.0",
+    "openpyxl>=3.1.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "jinja2>=3.1.0",
+    "python-multipart>=0.0.9",
+    "dnspython>=2.6.0",
+    "tzdata>=2024.1",
+    "imap-tools>=1.7.0",
+    "psycopg[binary]>=3.1.0",
+    "cryptography>=42.0.0",
+]
+
+[tool.setuptools]
+# Source lives in config/ and tools/; this repo is run as scripts, not packaged/distributed.
+packages = ["config"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

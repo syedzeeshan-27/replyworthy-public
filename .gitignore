@@ -1,0 +1,33 @@
+# Secrets & credentials — NEVER commit
+.env
+credentials.json
+token.json
+*.pem
+*.key
+
+# Temporary / regenerable processing files
+.tmp/
+*.log
+
+# Persistent dedup ledger (private state, never commit)
+data/
+
+# Deliverables (regenerated per run)
+outputs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

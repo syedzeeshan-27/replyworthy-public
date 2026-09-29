@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Replyworthy — Replies{% endblock %}
+{% block page_title %}Replies{% endblock %}
+{% block page_sub %}
+<div class="sub">Leads waiting for a human reply. Write back right here — it sends from your
+  mailbox in the same thread. Nothing auto-replies; you write every word.</div>
+{% endblock %}
+
+{% block content %}
+{% if rows %}
+{% for lead in rows %}
+<div class="card qrow">
+  <div class="qhead">
+    <a href="/lead/{{ lead.id }}">{{ lead.name }}</a>
+    <span class="badge badge-{{ lead.status }}">{{ lead.status }}</span>
+    <span class="meta">{{ lead.category or '' }} · {{ lead.city or '' }} · {{ lead.updated_at }}</span>
+  </div>
+
+  {% if lead.last_reply %}
+  {% if lead.last_reply.summary %}
+  <div style="font-weight:650;font-size:.92rem">{{ lead.last_reply.summary }}</div>
+  {% endif %}
+  {% if lead.last_reply.suggested_action %}
+  <div class="hint">Suggested: {{ lead.last_reply.suggested_action }}</div>
+  {% endif %}
+  <div class="snippet">{{ (lead.last_reply.body_text or '')[:400] }}</div>
+  {% else %}
+  <div class="hint">{{ lead.status_reason or 'No reply text on file.' }}</div>
+  {% endif %}
+
+  {% if lead.email %}
+  <form method="post" action="/lead/{{ lead.id }}/reply" class="replybox"
+    onsubmit="this.querySelector('[type=submit]').disabled=true">
+    <input type="hidden" name="back" value="/queue">
+    <textarea name="body" rows="3" required
+      placeholder="Write your reply to {{ lead.email }} — it sends from your mailbox, in the same thread."></textarea>
+    <div class="replyrow">
+      <button class="btn-sm" type="submit">Send reply</button>
+      {% if dry_run %}<span class="hint">Practice mode — it won't really send until you go live.</span>{% endif %}
+    </div>
+  </form>
+  {% endif %}
+
+  <div class="qactions">
+    {% if lead.email %}
+    <button type="button" class="btn-sm btn-ghost copybtn"
+      onclick="navigator.clipboard.writeText('{{ lead.email }}');this.textContent='copied!'">
+      or copy {{ lead.email }}</button>
+    {% endif %}
+    <form method="post" action="/lead/{{ lead.id }}/status" style="display:flex;gap:8px;margin-left:auto">
+      <input type="hidden" name="back" value="/queue">
+      <select name="status">
+        <option value="" selected disabled>done — move to…</option>
+        {% for s in done_statuses %}
+        <option value="{{ s }}">{{ s }}</option>
+        {% endfor %}
+      </select>
+      <button class="btn-sm" type="submit">Done</button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="big">🎉</div>
+    <div class="t">Nothing needs you right now</div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
