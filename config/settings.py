@@ -55,6 +55,13 @@ LEADGEN_MODEL = os.environ.get("LEADGEN_MODEL", "claude-sonnet-5")
 COPY_BLOCKLIST = os.environ.get("COPY_BLOCKLIST")
 
 
+def demo_mode() -> bool:
+    """DEMO_MODE=true turns the app into a public, read-mostly showcase:
+    visitors are signed in to seeded sample data, nothing is sent, nothing
+    paid is called, no alerts go out. Read live so tests can flip it."""
+    return os.environ.get("DEMO_MODE", "").strip().lower() == "true"
+
+
 def require(key: str) -> str:
     """Return an environment variable, raising a clear error if it is missing.
 

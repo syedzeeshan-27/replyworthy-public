@@ -111,6 +111,25 @@ class AnalyzeLeadPersonPromptTestCase(unittest.TestCase):
             result = analyze_lead_flat.analyze_lead(business, OFFER)
         return result, client
 
+    def test_person_prompt_addresses_the_person(self):
+        person = {
+            "entity_type": "person", "name": "Jane Marsh", "title": "Founder",
+            "company": "Marsh Marketing", "category": "marketing agencies",
+            "city": "Austin", "website": "# Marsh Marketing\nWe do ads.",
+        }
+        result, client = self._analyze(person)
+        kwargs = client.messages.calls[0]
+        user_prompt = kwargs["messages"][0]["content"]
+        self.assertIn("Person: Jane Marsh", user_prompt)
+        self.assertIn("Job title: Founder", user_prompt)
+        self.assertIn("Company: Marsh Marketing", user_prompt)
+        self.assertIn("Company website content", user_prompt)
+        system = kwargs["system"]
+        self.assertIn("PERSON", system)
+        self.assertIn("first name", system)
+        # Business-only wording must be gone on the person path.
+        self.assertNotIn("NO individual contact name", system)
+        self.assertEqual(result["score"], 4)
 
     def test_person_without_website_still_gets_a_real_call(self):
         person = {
@@ -125,6 +144,17 @@ class AnalyzeLeadPersonPromptTestCase(unittest.TestCase):
         self.assertIn("No company website content is available", user_prompt)
         self.assertNotIn("could not scrape website", result["pain_points"])
 
+    def test_business_prompt_unchanged(self):
+        business = {
+            "name": "Bright Smile Dental", "category": "dentist",
+            "city": "Boise", "website": "# Bright Smile\nCall us!",
+        }
+        _, client = self._analyze(business)
+        kwargs = client.messages.calls[0]
+        self.assertIn("Business name: Bright Smile Dental",
+                      kwargs["messages"][0]["content"])
+        self.assertIn("NO individual contact name", kwargs["system"])
+        self.assertNotIn("PERSON", kwargs["system"])
 
     def test_business_without_website_keeps_no_call_fallback(self):
         business = {"name": "No Site LLC", "category": "plumber",

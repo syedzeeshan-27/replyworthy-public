@@ -22,6 +22,9 @@ os.environ.pop("OWNER_EMAIL", None)
 os.environ["BASE_URL"] = "http://localhost:8000"
 os.environ["SUPABASE_URL"] = "http://supabase.invalid"
 os.environ["SUPABASE_ANON_KEY"] = "test-anon-key"
+# The email signature needs a sender; a fresh clone has no .env to give one.
+os.environ["SENDER_NAME"] = "Test Sender"
+os.environ["SENDER_PHONE"] = "555-0100"
 
 import sys  # noqa: E402
 from pathlib import Path  # noqa: E402

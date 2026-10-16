@@ -72,6 +72,12 @@
     </aside>
 
     <div class="main">
+      {% if demo %}
+      <div class="demo-banner">
+        <strong>Live demo</strong> with made-up sample data. Searching, AI writing and sending are switched off.
+        <a href="https://github.com/syedzeeshan-27/replyworthy-public#quickstart" target="_blank" rel="noopener">Run your own copy →</a>
+      </div>
+      {% endif %}
       <div class="topbar">
         <div>
           <h1>{% block page_title %}{% endblock %}</h1>

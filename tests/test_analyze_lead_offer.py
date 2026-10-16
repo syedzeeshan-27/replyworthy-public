@@ -123,8 +123,51 @@ class AnalyzeLeadOfferTestCase(unittest.TestCase):
     def tearDown(self) -> None:
         analyze_lead_module._client = None
 
+    def test_em_en_dashes_stripped_from_generated_copy(self):
+        dashed = {
+            **_GOOD_PAYLOAD,
+            "email_subject": "quick idea — for your front desk",
+            "email_body": (
+                "Hi Acme Dental team,\n\n"
+                "Your site looks great — but you're only reachable 8–17. We "
+                "help you catch the rest — automatically, no extra staff.\n\n"
+                "Best,"
+            ),
+        }
+        fake_client = _FakeClient(response=_FakeMessage(dashed))
+        with patch.object(analyze_lead_module, "_get_client", return_value=fake_client):
+            result = analyze_lead(_BUSINESS_WITH_SITE, OTHER_OFFER)
 
+        for dash in ("—", "–"):
+            self.assertNotIn(dash, result["email_subject"])
+            self.assertNotIn(dash, result["email_body"])
+        self.assertIn("8-17", result["email_body"])  # range kept, hyphenated
+        # The prompt also forbids them up front (belt and braces).
+        self.assertIn("em dashes", fake_client.messages.last_kwargs["system"])
 
+    def test_offer_text_in_system_prompt_and_sms_phrases_absent_for_other_offer(self):
+        fake_client = _FakeClient(response=_FakeMessage(_GOOD_PAYLOAD))
+        with patch.object(analyze_lead_module, "_get_client", return_value=fake_client):
+            result = analyze_lead(_BUSINESS_WITH_SITE, OTHER_OFFER)
+
+        system_prompt = fake_client.messages.last_kwargs["system"]
+        self.assertIn(OTHER_OFFER["product_description"], system_prompt)
+        self.assertIn(OTHER_OFFER["qualification_hints"], system_prompt)
+        self.assertIn(OTHER_OFFER["target_customer"], system_prompt)
+
+        for phrase in ("text-back", "texts them back", "missed calls"):
+            self.assertNotIn(phrase.lower(), system_prompt.lower())
+
+        self.assertEqual(result["score"], 4)
+
+    def test_sms_offer_text_appears_when_sms_offer_passed(self):
+        fake_client = _FakeClient(response=_FakeMessage(_GOOD_PAYLOAD))
+        with patch.object(analyze_lead_module, "_get_client", return_value=fake_client):
+            analyze_lead(_BUSINESS_WITH_SITE, SMS_OFFER)
+
+        system_prompt = fake_client.messages.last_kwargs["system"]
+        self.assertIn(SMS_OFFER["product_description"], system_prompt)
+        self.assertIn(SMS_OFFER["qualification_hints"], system_prompt)
 
     def test_offer_none_uses_default_offer(self):
         fake_client = _FakeClient(response=_FakeMessage(_GOOD_PAYLOAD))

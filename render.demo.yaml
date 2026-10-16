@@ -1,0 +1,28 @@
+# Render Blueprint for the public, read-only demo (free plan, no keys needed).
+#
+# Every visitor is signed in to made-up sample data. Searching, AI writing,
+# mailboxes, sending, billing and alerts are switched off in code, so this
+# costs nothing and contacts nobody. The data resets on every restart.
+#
+# In Render: New -> Blueprint -> pick this repo -> Blueprint path: render.demo.yaml
+
+services:
+  - type: web
+    name: replyworthy-demo
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    envVars:
+      - key: DEMO_MODE
+        value: "true"
+      - key: DRY_RUN
+        value: "true"
+      - key: AUTO_TICK_SECONDS
+        value: "0"
+      - key: TICK_LOOP
+        value: "false"
+      - key: LEADGEN_DATA_DIR
+        value: /tmp/replyworthy
+      - key: SESSION_SECRET
+        generateValue: true

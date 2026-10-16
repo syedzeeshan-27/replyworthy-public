@@ -308,12 +308,29 @@ class OwnerEmailTestCase(TenancyTestMixin, unittest.TestCase):
         self.assertNotEqual(early["workspace_id"], 1)
         self.assertEqual((boss["role"], boss["workspace_id"]), ("admin", 1))
 
-    def test_deployed_server_without_owner_email_gives_nobody_admin(self):
+    def test_deployed_server_without_owner_email_first_login_is_admin(self):
         with mock.patch.dict("os.environ", {"BASE_URL": "https://app.example.com"}):
             signup(TestClient(webapp.app), "first@test.example", "password123")
+            signup(TestClient(webapp.app), "second@test.example", "password123")
         first = lead_db.get_user_by_email("first@test.example")
-        self.assertEqual(first["role"], "member")
-        self.assertNotEqual(first["workspace_id"], 1)
+        second = lead_db.get_user_by_email("second@test.example")
+        self.assertEqual((first["role"], first["workspace_id"]), ("admin", 1))
+        self.assertEqual(second["role"], "member")
+
+    def test_owner_email_set_late_promotes_while_no_admin_exists(self):
+        with mock.patch.dict("os.environ", {"OWNER_EMAIL": "someone@else.example"}):
+            signup(TestClient(webapp.app), "late@test.example", "password123")
+        self.assertEqual(lead_db.get_user_by_email("late@test.example")["role"], "member")
+        with mock.patch.dict("os.environ", {"OWNER_EMAIL": "late@test.example"}):
+            login(TestClient(webapp.app), "late@test.example", "password123")
+        self.assertEqual(lead_db.get_user_by_email("late@test.example")["role"], "admin")
+
+    def test_owner_email_set_late_never_steals_an_existing_admin_seat(self):
+        signup_owner(TestClient(webapp.app))
+        signup(TestClient(webapp.app), "late@test.example", "password123")
+        with mock.patch.dict("os.environ", {"OWNER_EMAIL": "late@test.example"}):
+            login(TestClient(webapp.app), "late@test.example", "password123")
+        self.assertEqual(lead_db.get_user_by_email("late@test.example")["role"], "member")
 
 
 class _Response:

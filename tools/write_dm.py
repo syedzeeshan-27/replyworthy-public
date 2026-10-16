@@ -47,14 +47,40 @@ OUTPUT_SCHEMA = {
 
 # Fixed mechanics for every DM, regardless of offer. Pitch content comes from
 # the offer profile below.
-_DM_RULES = "[prompt text removed from the public copy of this repo]"
+_DM_RULES = (
+    "Write ONE short direct message (roughly 40-80 words) to be sent from a "
+    "personal account to this business's Facebook or Instagram page. Casual, "
+    "human, easy to read on a phone. Reference ONE concrete detail about this "
+    "specific business so it can't read as a blast. Vary your opening and "
+    "closing phrasing — never a stock template line, because repeated "
+    "identical openers get the sender's account flagged as spam. Do not name "
+    "a specific product, tool, brand, or URL — describe what it does in plain "
+    'language instead (e.g. "a booking link"). Do NOT include links, prices, '
+    "guarantees, or invented details. Never use em dashes (—) or en dashes "
+    "(–); use a comma, a period, or the word 'to' instead. End with one "
+    "low-pressure question."
+)
 
 
 def _build_system_prompt(offer: dict) -> str:
-    """The real prompt is built from the offer profile; its wording is
-    not part of the public copy."""
-    product = (offer.get("product_description") or "").strip()
-    return "[prompt text removed from the public copy of this repo] Offer: " + product
+    product_description = (offer.get("product_description") or "").strip()
+    value_prop = (offer.get("value_prop") or "").strip()
+    tone = (offer.get("tone") or "casual, friendly").strip()
+    sender_name = (offer.get("sender_name") or "").strip()
+
+    prompt = (
+        "You write first-touch social DMs for an agency that sells the "
+        f"following offer to small local businesses: {product_description} "
+        f"Value proposition: {value_prop} "
+        f"Write in this tone: {tone}. {_DM_RULES}"
+    )
+    if sender_name:
+        first = sender_name.split()[0]
+        prompt += f" Sign off casually with just the first name {first}."
+    return (
+        prompt
+        + ' Produce one field: "dm_text" — the complete message, ready to paste.'
+    )
 
 
 _client = None

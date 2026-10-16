@@ -94,7 +94,28 @@ class ClassifyReplyOfferTestCase(unittest.TestCase):
     def tearDown(self) -> None:
         classify_reply_module._client = None
 
+    def test_prompt_names_offer_when_passed(self):
+        fake_client = _FakeClient(_FakeMessage(_CLASSIFY_RESULT))
+        with patch.object(classify_reply_module, "_get_client", return_value=fake_client):
+            result = classify_reply_module.classify_reply(_CLASSIFY_PAYLOAD, FAKE_OFFER)
 
+        system_prompt = fake_client.messages.last_kwargs["system"]
+        self.assertIn(FAKE_OFFER["name"], system_prompt)
+        self.assertIn(FAKE_OFFER["product_description"], system_prompt)
+        for phrase in SMS_PHRASES:
+            self.assertNotIn(phrase, system_prompt.lower())
+        self.assertEqual(result["classification"], "interested")
+
+    def test_prompt_is_neutral_without_offer(self):
+        fake_client = _FakeClient(_FakeMessage(_CLASSIFY_RESULT))
+        with patch.object(classify_reply_module, "_get_client", return_value=fake_client):
+            result = classify_reply_module.classify_reply(_CLASSIFY_PAYLOAD)
+
+        system_prompt = fake_client.messages.last_kwargs["system"]
+        self.assertIn("a product or service to local businesses", system_prompt)
+        for phrase in SMS_PHRASES:
+            self.assertNotIn(phrase, system_prompt.lower())
+        self.assertEqual(result["classification"], "interested")
 
 
 class EnrollLeadsOfferCopyTestCase(unittest.TestCase):
@@ -115,9 +136,10 @@ class EnrollLeadsOfferCopyTestCase(unittest.TestCase):
 
 class NoSmsBotTextInToolsTestCase(unittest.TestCase):
     """Grep-style definition-of-done check: the SMS-bot pitch phrases live
-    only in tools/lead_db.py (the seeded offer row — data, not a prompt)."""
+    only in tools/lead_db.py (the seeded offer row — data, not a prompt) and
+    tools/seed_demo.py (made-up sample data for the demo)."""
 
-    ALLOWED = {"lead_db.py"}
+    ALLOWED = {"lead_db.py", "seed_demo.py"}
     PHRASES = ("text-back", "missed calls")
 
     def test_no_sms_bot_phrases_outside_lead_db(self):

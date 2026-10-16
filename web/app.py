@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from datetime import datetime
 from pathlib import Path
-from urllib.parse import quote, urlencode
+from urllib.parse import quote, urlencode, urlsplit
 
 from fastapi import FastAPI, Form, Query, Request
 from fastapi.concurrency import run_in_threadpool
@@ -41,7 +42,7 @@ import lead_db  # noqa: E402
 import mailboxes  # noqa: E402
 import parse_query  # noqa: E402
 import write_dm  # noqa: E402
-from config.settings import DATA_DIR  # noqa: E402
+from config.settings import DATA_DIR, demo_mode  # noqa: E402
 from enroll_leads import create_campaign, enroll  # noqa: E402
 from sequencer import send_manual_reply  # noqa: E402
 from send_email import (dry_run_enabled, verify_unsub_token,  # noqa: E402
@@ -55,7 +56,34 @@ app.mount("/static", StaticFiles(directory=WEB_DIR / "static"), name="static")
 
 @app.on_event("startup")
 def _start_engine_pacemaker():
+    if demo_mode():
+        import seed_demo
+        seed_demo.reset_and_seed()  # every boot starts from clean sample data
+        return  # the demo never ticks: nothing is sent, nothing is fetched
     start_auto_tick()  # replies checked + due emails sent every few minutes
+
+
+# What a demo visitor may still click: edits that stay inside the sample data.
+# Everything else that POSTs (searches, AI writing, mailboxes, sending, billing,
+# admin billing, global pause) is refused with a toast.
+DEMO_ALLOWED_POSTS = re.compile(
+    r"^/(logout|admin/switch|offers/.*|lead/\d+/(status|notes)"
+    r"|pipeline/bulk-status|campaigns/(create|\d+/(enroll|toggle)|ws-pause|ws-resume))$"
+)
+
+
+async def demo_guard(request: Request, call_next):
+    if (demo_mode() and request.method == "POST"
+            and not DEMO_ALLOWED_POSTS.match(request.url.path)):
+        back = urlsplit(request.headers.get("referer", "")).path
+        msg = quote("That's switched off in the live demo. Deploy your own copy to use it.")
+        return RedirectResponse(url=f"{auth.safe_next(back)}?msg={msg}",
+                                status_code=303)
+    return await call_next(request)
+
+
+# Registered first so it runs inside auth: the visitor is already signed in.
+app.middleware("http")(demo_guard)
 app.middleware("http")(auth.auth_middleware)
 app.include_router(auth.router)
 templates = Jinja2Templates(directory=WEB_DIR / "templates")
@@ -158,6 +186,7 @@ def page_ctx(request: Request, active_nav: str) -> dict:
         "workspace": workspace,
         # Admin god-view: every workspace for the switcher; members get none.
         "workspaces": lead_db.list_workspaces() if is_admin else [],
+        "demo": demo_mode(),
     }
 
 

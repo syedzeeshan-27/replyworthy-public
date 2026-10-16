@@ -284,6 +284,19 @@ def link_auth_user(user_id: int, auth_user_id: str) -> None:
         con.close()
 
 
+def set_user_role(user_id: int, role: str) -> None:
+    """Promote/demote one account (web/auth.py: OWNER_EMAIL set late)."""
+    if role not in ("member", "admin"):
+        raise ValueError(f"unknown role {role!r}")
+    con = connect()
+    try:
+        with con.tx():
+            con.execute("UPDATE users SET role = ? WHERE id = ?",
+                        (role, user_id))
+    finally:
+        con.close()
+
+
 def count_admins() -> int:
     con = connect()
     try:

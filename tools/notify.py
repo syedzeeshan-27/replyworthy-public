@@ -42,8 +42,15 @@ def _base_url() -> str:
     return (os.environ.get("BASE_URL") or "http://localhost:8000").rstrip("/")
 
 
+def _demo() -> bool:
+    """The public demo pings nobody (DEMO_MODE=true)."""
+    return os.environ.get("DEMO_MODE", "").strip().lower() == "true"
+
+
 def _telegram_send(text: str) -> bool:
     """True on delivered. Tests replace this function."""
+    if _demo():
+        return False
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
     if not token or not chat_id:
@@ -65,6 +72,8 @@ def _telegram_send(text: str) -> bool:
 
 def _email_send(subject: str, text: str) -> bool:
     """Self-email fallback over the Stage-2 SMTP creds. Tests replace this."""
+    if _demo():
+        return False
     to_addr = os.environ.get("ALERT_EMAIL", "").strip()
     if not to_addr:
         return False
@@ -96,7 +105,7 @@ def _workspace_email_send(con, workspace_id: int, subject: str,
     """v2/06 D: a tenant workspace's alerts also go to ITS OWN alert email —
     the customer must hear their mailbox broke, not just the owner. The
     owner's phone chain keeps covering everything; this never raises."""
-    if workspace_id == lead_db.OWNER_WORKSPACE_ID:
+    if _demo() or workspace_id == lead_db.OWNER_WORKSPACE_ID:
         return False  # the owner already gets the Telegram/ALERT_EMAIL chain
     try:
         row = con.execute(

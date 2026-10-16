@@ -1,7 +1,8 @@
 [project]
-name = "leadgen"
-version = "0.1.0"
-description = "WAT-framework lead generation pipeline (Apify -> scrape -> Claude analyze -> score -> CSV)"
+name = "replyworthy"
+version = "1.0.0"
+license = {text = "MIT"}
+description = "Open-source AI outreach agent: find local-business leads, score them, write the first email, sort the replies."
 requires-python = ">=3.10"
 dependencies = [
     "requests>=2.31.0",

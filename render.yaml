@@ -1,4 +1,5 @@
-# Render deploy config — applied at the FINAL step only (steps in OWNER_GUIDE.md).
+# Render deploy config for your own install (see README.md, "Deploy your own").
+# For a public read-only demo with sample data, use render.demo.yaml instead.
 #
 # One web service runs BOTH the UI and the outreach heartbeat (TICK_LOOP=true
 # starts `outreach_tick.py --loop` inside the same container). The database
@@ -8,12 +9,12 @@
 #
 # `sync: false` = set the value by hand in the Render dashboard (secrets never
 # live in this file). Also set one SMTP_PASS_<LOCALPART> env var per mailbox
-# in the dashboard (e.g. SMTP_PASS_ZEE for zee@yourdomain.com) — they can't be
+# in the dashboard (e.g. SMTP_PASS_YOU for you@yourdomain.com) — they can't be
 # pre-listed here because the names depend on the mailboxes you buy.
 
 services:
   - type: web
-    name: leadgen
+    name: replyworthy
     runtime: docker
     plan: starter          # disks + always-on require Starter
     dockerfilePath: ./Dockerfile
@@ -37,7 +38,7 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false        # the public anon key, never the service_role key
       - key: OWNER_EMAIL
-        sync: false        # the only address that becomes admin
+        sync: false        # optional: else the first account to log in is admin
       # --- login sessions (Stage 4) ---
       - key: SESSION_SECRET
         sync: false        # random 64-hex; without it everyone is logged out on each restart
@@ -56,7 +57,7 @@ services:
       - key: SMTP_MAILBOXES
         sync: false
       - key: BASE_URL
-        sync: false        # the Render URL, e.g. https://leadgen.onrender.com
+        sync: false        # the Render URL, e.g. https://replyworthy.onrender.com
       - key: UNSUBSCRIBE_SECRET
         sync: false
       - key: OUTREACH_PAUSED
@@ -78,7 +79,7 @@ services:
       - key: GHL_LOCATION_ID
         sync: false
     disk:
-      name: leadgen-data
+      name: replyworthy-data
       mountPath: /data
       sizeGB: 1
     healthCheckPath: /

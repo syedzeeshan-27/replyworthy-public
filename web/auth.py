@@ -15,9 +15,16 @@ workspace and trial credits.
 Roles: 'member' (sees exactly one workspace) and 'admin' (the owner; gets a
 workspace switcher — the acting workspace rides inside the signed session
 payload, so it can't be forged client-side). Admin goes to the address in
-OWNER_EMAIL. With OWNER_EMAIL unset, the first account is admin on a local
-(http) install only; on a deployed (https) one nobody becomes admin until
-OWNER_EMAIL is set.
+OWNER_EMAIL. With OWNER_EMAIL unset, the first account to log in becomes
+admin. Setting OWNER_EMAIL later still promotes that address, as long as no
+admin exists yet.
+
+Two modes skip Supabase entirely:
+- Local single-user mode: Supabase keys blank AND BASE_URL not https. The
+  visitor is signed in as the one local owner. Meant for running it on your
+  own laptop; never active on a deployed (https) server.
+- Demo mode (DEMO_MODE=true): every visitor is signed in to the seeded demo
+  workspace (tools/seed_demo.py). Risky routes are blocked in web/app.py.
 
 Cookie flags: HttpOnly + SameSite=Lax always; Secure when BASE_URL is https
 (production) — a Secure cookie on plain-http localhost would never be sent
@@ -49,6 +56,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "tools"))
 
 import lead_db  # noqa: E402
 import supabase_auth  # noqa: E402
+from config.settings import demo_mode  # noqa: E402
 from supabase_auth import AuthError  # noqa: E402
 
 router = APIRouter()
@@ -183,13 +191,22 @@ def _is_owner(email: str) -> bool:
     owner = _owner_email()
     if owner:
         return email == owner
-    if _cookie_secure():
-        if lead_db.count_admins() == 0:
-            print("WARNING: OWNER_EMAIL is not set, so no account can become "
-                  "admin on this deployed server. Set OWNER_EMAIL in the "
-                  "environment.", file=sys.stderr)
-        return False
-    return lead_db.count_users() == 0  # local install: first account is you
+    # No OWNER_EMAIL: whoever logs in first owns this install.
+    if lead_db.count_admins() == 0:
+        print(f"NOTE: OWNER_EMAIL is not set, so {email} becomes the admin "
+              "as the first account to log in.", file=sys.stderr)
+        return True
+    return False
+
+
+def _promote_late_owner(user: dict) -> dict:
+    """OWNER_EMAIL set after that address already had a member account: make
+    it admin, but only while nobody is admin yet (never steals the seat)."""
+    if (user["role"] != "admin" and _owner_email()
+            and user["email"] == _owner_email() and lead_db.count_admins() == 0):
+        lead_db.set_user_role(user["id"], "admin")
+        return lead_db.get_user(user["id"])
+    return user
 
 
 def ensure_local_user(auth_user: dict) -> dict:
@@ -198,12 +215,12 @@ def ensure_local_user(auth_user: dict) -> dict:
     everyone else gets a fresh workspace of their own."""
     user = lead_db.get_user_by_auth_id(auth_user["id"])
     if user:
-        return user
+        return _promote_late_owner(user)
     email = auth_user["email"]
     user = lead_db.get_user_by_email(email)
     if user:
         lead_db.link_auth_user(user["id"], auth_user["id"])
-        return lead_db.get_user(user["id"])
+        return _promote_late_owner(lead_db.get_user(user["id"]))
 
     workspace_name = str(auth_user["metadata"].get("workspace_name") or "").strip()
     if _is_owner(email):
@@ -248,14 +265,57 @@ def _resolve_session(token: str | None) -> tuple[dict | None, int | None]:
     return user, workspace_id
 
 
+def local_mode() -> bool:
+    """No Supabase keys on a plain-http install: one person on their own
+    machine. Never true on https, so a deployed server can't fall into it."""
+    return (not demo_mode() and not supabase_auth.configured()
+            and not _cookie_secure())
+
+
+def auto_login_enabled() -> bool:
+    return demo_mode() or local_mode()
+
+
+AUTO_ACCOUNTS = {
+    # mode: (auth_user_id, email, workspace name if workspace 1 is missing)
+    "demo": ("demo-visitor", "demo@replyworthy.example", "Demo agency"),
+    "local": ("local-owner", "owner@localhost", "My workspace"),
+}
+
+
+def _auto_user() -> dict:
+    """The account a visitor is signed in as when Supabase is skipped: the
+    admin of workspace 1, created on first use."""
+    auth_id, email, name = AUTO_ACCOUNTS["demo" if demo_mode() else "local"]
+    user = lead_db.get_user_by_auth_id(auth_id)
+    if user:
+        return user
+    workspace_id = lead_db.OWNER_WORKSPACE_ID
+    if lead_db.get_workspace(workspace_id) is None:
+        workspace_id = lead_db.create_workspace(name)
+    try:
+        user_id = lead_db.create_user(email, workspace_id, "admin", auth_id)
+    except Exception:  # two first requests raced; the other one won
+        user = lead_db.get_user_by_auth_id(auth_id)
+        if user:
+            return user
+        raise
+    return lead_db.get_user(user_id)
+
+
 async def auth_middleware(request: Request, call_next):
     """Resolve the session once per request (workspace_id is read from here
     and nowhere else). Unauthenticated hits on protected paths bounce to
-    /login."""
+    /login, except in local and demo mode, where the visitor is signed in."""
     token = request.cookies.get(SESSION_COOKIE)
     # The lookup hits the database: off the event loop, like the routes.
     request.state.user, request.state.workspace_id = (
         await run_in_threadpool(_resolve_session, token))
+
+    if request.state.user is None and auto_login_enabled():
+        user = await run_in_threadpool(_auto_user)
+        request.state.user, request.state.workspace_id = user, user["workspace_id"]
+        return _set_session(await call_next(request), user["id"])
 
     path = request.url.path
     if request.state.user is None and not is_public_path(path):

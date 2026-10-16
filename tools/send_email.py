@@ -17,10 +17,10 @@ practice-only always.
 
 Env (.env):
     SMTP_MAILBOXES      comma-separated sending addresses
-                        e.g. zee@trydomain.com,outreach@trydomain.com
+                        e.g. you@yourdomain.com,outreach@yourdomain.com
     SMTP_PASS_<LOCAL>   app password per mailbox; <LOCAL> is the local part
                         uppercased, non-alphanumerics -> "_"
-                        (zee@... -> SMTP_PASS_ZEE)
+                        (you@... -> SMTP_PASS_YOU)
     SENDER_ADDRESS      physical mailing address (CAN-SPAM; required for real sends)
     BASE_URL            web app root for unsubscribe links (localhost until deploy)
     UNSUBSCRIBE_SECRET  HMAC key for unsubscribe tokens
@@ -53,7 +53,10 @@ SMTP_TIMEOUT = 30
 
 
 def dry_run_enabled() -> bool:
-    """True unless .env explicitly says DRY_RUN=false. Default-safe."""
+    """True unless .env explicitly says DRY_RUN=false. Default-safe. The
+    public demo (DEMO_MODE=true) is always dry, whatever DRY_RUN says."""
+    if os.environ.get("DEMO_MODE", "").strip().lower() == "true":
+        return True
     return os.environ.get("DRY_RUN", "true").strip().lower() != "false"
 
 

@@ -546,3 +546,10 @@ input[type="email"]:focus,input[type="password"]:focus{
 .dm-sent-form select{padding:7px 9px;font-size:.85rem}
 .dm-error{color:var(--danger)}
 .dm-flag{color:var(--warn)}
+
+/* Public demo strip (DEMO_MODE=true only). */
+.demo-banner{background:var(--primary-soft);color:var(--ink);border-bottom:1px solid var(--line);
+  padding:9px 28px;font-size:.87rem}
+.demo-banner a{color:var(--primary-strong);font-weight:600;margin-left:6px;text-decoration:none}
+.demo-banner a:hover{text-decoration:underline}
+@media (max-width:900px){.demo-banner{padding:8px 14px}}

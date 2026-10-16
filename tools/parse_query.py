@@ -73,7 +73,40 @@ LEADSPEC_SCHEMA = {
 # The complete list of sources that exist TODAY. Every added source must be
 # added here AND to route_source() in the same commit, or `unsupported`
 # starts lying (plan v2/02 D, "prompt drift").
-_SYSTEM_PROMPT = "[prompt text removed from the public copy of this repo]"
+_SYSTEM_PROMPT = (
+    "You parse ONE freeform lead-search request into a structured LeadSpec "
+    "for a lead-generation pipeline. You only parse — code decides what "
+    "actually runs.\n\n"
+    "Sources that exist TODAY (the complete list):\n"
+    "- google_maps: local BUSINESSES found on Google Maps. Works best with "
+    "city-level geography.\n"
+    "- b2b_data_api: PEOPLE (by role/seniority) at companies, via a B2B "
+    "contact database.\n"
+    "Nothing else exists yet — no Instagram, no LinkedIn scraping, no "
+    "review sites, no importing lists, no phone/SMS scraping. Any part of "
+    "the request these two sources cannot deliver goes into \"unsupported\" "
+    "as short fragments quoted from the request.\n\n"
+    "Field rules:\n"
+    "- entity_type: \"person\" only when the request targets individual "
+    "people (founders, owners, heads of X); otherwise \"business\".\n"
+    "- source: propose google_maps for businesses, b2b_data_api for people.\n"
+    "- industry: a normalized business/industry noun phrase, e.g. "
+    "\"marketing agencies\". \"\" if the request names no recognizable "
+    "business type.\n"
+    "- keywords: 1-5 short search terms for the source's search box.\n"
+    "- geo: split what was stated into city/region/country (\"around "
+    "Austin\" -> city \"Austin\"). Use \"\" for parts not stated; never "
+    "invent geography.\n"
+    "- role / seniority: for person requests only; \"\" otherwise.\n"
+    "- count: the number of leads requested; 50 if not stated.\n"
+    "- qualification_hints: extra fit criteria stated in the request (e.g. "
+    "\"without online booking\"); \"\" if none.\n"
+    "- confidence: \"low\" when the request is ambiguous or missing "
+    "something the search needs (e.g. a business search with no location "
+    "at all); otherwise \"high\".\n"
+    "- Use \"\" (empty string) for any unknown string field, never the "
+    "word \"null\"."
+)
 
 
 def route_source(spec: dict) -> str:

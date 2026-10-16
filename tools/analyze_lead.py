@@ -41,7 +41,15 @@ RETRY_DELAY = 20  # seconds before the single app-level retry on 429/5xx
 # Platform writing rules — fixed mechanics for every generated email,
 # regardless of offer. Pitch content (what we sell, who it's for, how to
 # qualify, tone, CTA style) is interpolated per-offer in _build_system_prompt.
-_EMAIL_RULES = "[prompt text removed from the public copy of this repo]"
+_EMAIL_RULES = (
+    "Keep it tight (roughly 90-150 words). End with a short sign-off line "
+    'only (e.g. "Best,"). Do NOT write the sender\'s name, phone number, or '
+    "any signature block — that is appended automatically. Do not name a "
+    "specific product, tool, brand, or URL — describe what it does in plain "
+    "language instead. Do NOT invent contact details, prices, or "
+    "guarantees. Never use em dashes (—) or en dashes (–) anywhere in the "
+    "subject or body; use a comma, a period, or the word 'to' instead."
+)
 
 # Structured-output schema: the API guarantees the response is valid JSON
 # matching this shape, so no fence-stripping/brace-hunting is needed.
@@ -64,10 +72,100 @@ SENDER_PHONE_KEY = "SENDER_PHONE"
 
 
 def _build_system_prompt(offer: dict, entity_type: str = "business") -> str:
-    """The real prompt is built from the offer profile; its wording is
-    not part of the public copy."""
-    product = (offer.get("product_description") or "").strip()
-    return "[prompt text removed from the public copy of this repo] Offer: " + product + " Entity: " + entity_type
+    """Build the analysis system prompt for one offer profile.
+
+    All pitch content comes from `offer` (product_description, value_prop,
+    target_customer, qualification_hints, disqualifiers, tone, cta_style).
+    Optional fields that are NULL/empty are omitted rather than printed as
+    "None". Only the fixed platform writing rules (word count, no
+    placeholders, no signature block, ...) stay hardcoded here.
+
+    `entity_type` (V2 Stage 3, plan v2/03 C3): "business" keeps the original
+    prompt byte-for-byte; "person" addresses a named individual in their role
+    at their company, with the COMPANY's website as the evidence.
+    """
+    product_description = (offer.get("product_description") or "").strip()
+    value_prop = (offer.get("value_prop") or "").strip()
+    target_customer = (offer.get("target_customer") or "").strip()
+    qualification_hints = (offer.get("qualification_hints") or "").strip()
+    disqualifiers = (offer.get("disqualifiers") or "").strip()
+    tone = (offer.get("tone") or "direct, friendly").strip()
+    cta_style = (offer.get("cta_style") or "soft ask for a short reply").strip()
+
+    intro = (
+        "You are a lead-qualification analyst for an agency that sells the "
+        f"following offer to small local businesses: {product_description} "
+        f"Value proposition: {value_prop}"
+    )
+    if target_customer:
+        intro += f" Ideal customer: {target_customer}"
+    if entity_type == "person":
+        intro += (
+            " You are given one PERSON (their name, job title, and company) "
+            "and, when available, their company's website content. Judge how "
+            "good a prospect that person is for THIS offer, based on their "
+            "role and what their company does. Less evidence (e.g. no "
+            "website content) means a lower, more conservative score — be "
+            "honest, never inflate. Produce these fields:\n"
+        )
+    else:
+        intro += (
+            " You analyze a business's website and judge how good a prospect "
+            "they are for THIS offer. Produce these fields:\n"
+        )
+
+    score_desc = (
+        '  - "score": integer 1-5 for how good a lead this is (5 = clearly '
+        "matches the ideal customer profile and qualification signals"
+    )
+    if qualification_hints:
+        score_desc += f" — {qualification_hints}"
+    score_desc += "; 1 = matches the disqualifiers or is otherwise not a fit"
+    if disqualifiers:
+        score_desc += f" — {disqualifiers}"
+    score_desc += ").\n"
+
+    if entity_type == "person":
+        body_desc = (
+            '  - "email_body": a full, ready-to-send personalized cold '
+            "outreach email selling the offer to THIS person in THEIR role "
+            "at THEIR company. Reference something concrete about their "
+            "company (from the website content when given, otherwise from "
+            "the title/company/industry). Open by greeting the person by "
+            'first name (e.g. "Hi Jane,"). Write in this tone: '
+            f"{tone}. Call-to-action approach: {cta_style}. {_EMAIL_RULES}\n"
+        )
+        pain_desc = (
+            '  - "pain_points": array of short specific strings naming gaps '
+            "this offer fixes for the person's company, grounded in the "
+            "evidence you were given.\n"
+        )
+    else:
+        body_desc = (
+            '  - "email_body": a full, ready-to-send personalized cold outreach '
+            "email selling the offer against THIS business's specific gaps. "
+            "Reference something concrete from their site. Open by greeting "
+            "the business by name (e.g. \"Hi Dyu Art Cafe team,\") — there is "
+            "NO individual contact name, so never write a [First name] "
+            f"placeholder. Write in this tone: {tone}. Call-to-action "
+            f"approach: {cta_style}. {_EMAIL_RULES}\n"
+        )
+        pain_desc = (
+            '  - "pain_points": array of short specific strings naming gaps '
+            "this offer fixes, grounded in what you saw on the business's "
+            "site.\n"
+        )
+
+    fields = (
+        f"{pain_desc}"
+        f"{score_desc}"
+        '  - "email_subject": a short cold-email subject line. '
+        "Lowercase-leaning, curiosity- or benefit-driven, specific to this "
+        "business. No ALL-CAPS, no spammy punctuation, no emojis.\n"
+        f"{body_desc}"
+    )
+
+    return intro + fields
 
 
 _client = None

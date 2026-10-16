@@ -31,9 +31,43 @@ MAX_REPLY_CHARS = 4000
 RETRY_DELAY = 20
 
 def _build_system_prompt(offer: dict | None) -> str:
-    """The real prompt defines the six reply classes; its wording is
-    not part of the public copy."""
-    return "[prompt text removed from the public copy of this repo]"
+    """Build the classification system prompt.
+
+    When an offer profile (tools/lead_db.py offer_profiles row) is provided,
+    the prompt names what the agency actually sells; otherwise it stays
+    offer-neutral. The classification labels and rules are fixed either way.
+    """
+    if offer is not None:
+        selling = (
+            f"selling {offer.get('name')}: {offer.get('product_description')}"
+        )
+    else:
+        selling = "selling a product or service to local businesses"
+    return (
+        "You classify replies to cold outreach emails for a small agency "
+        f"{selling}. Given the email we sent "
+        "and the prospect's reply, produce:\n"
+        '  - "classification": exactly one of\n'
+        '      interested       - wants to know more: any question about price, how it '
+        "works, availability, a demo/video, or an explicit yes.\n"
+        '      not_interested   - a clear, calm no ("not for us", "we\'re good, thanks").\n'
+        '      unsubscribe      - asks to stop being contacted ("take me off your '
+        'list", "stop emailing me", "no thanks" as opt-out). Legal difference from '
+        "not_interested: unsubscribe means never contact again.\n"
+        '      out_of_office    - automatic away/vacation reply.\n'
+        '      wrong_person     - says they are not the right contact or the address '
+        "reached someone else.\n"
+        '      needs_human      - anything a human must read: anger, complaints, '
+        "legal threats, confusion about who we are, mixed signals, negotiation, or "
+        "anything that fits no other class cleanly.\n"
+        '  - "confidence": high | medium | low. Be honest - when in doubt, lower it. '
+        "Anger or legal language is ALWAYS needs_human, never not_interested.\n"
+        '  - "summary": one short line a busy owner reads on their phone '
+        '(e.g. "asks price, wants demo video").\n'
+        '  - "suggested_action": one short imperative line for the human '
+        '(e.g. "reply with pricing + 2-min video link").\n'
+        "Classify only from the reply text. Never invent details."
+    )
 
 
 OUTPUT_SCHEMA = {
